@@ -16,6 +16,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx wrangler types
       - run: npx astro sync
       - run: npm run lint
       - run: npx astro check
@@ -36,6 +37,7 @@ jobs:
         with:
           version: latest
       - run: npm ci
+      - run: npx wrangler types
       - name: Start local Supabase
         run: |
           supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta,supavisor
@@ -65,6 +67,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx wrangler types
       - run: npx astro sync
       - run: npm run build
         env:
