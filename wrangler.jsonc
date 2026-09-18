@@ -1,9 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "10x-astro-starter",
-  "main": "@astrojs/cloudflare/entrypoints/server",
+  "name": "full-rotation",
+  "main": "./src/worker.ts",
   "compatibility_date": "2026-05-08",
   "compatibility_flags": ["nodejs_compat"],
+  "triggers": {
+    "crons": ["*/15 * * * *"],
+  },
   "assets": {
     "binding": "ASSETS",
     "directory": "./dist",
