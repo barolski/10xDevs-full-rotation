@@ -29,4 +29,9 @@ pnpm-debug.log*
 
 # Claude Code (local-only, not for the public repo)
 .claude/
-CLAUDE.local.md
+CLAUDE.*
+
+# editor / tooling (local-only, not needed in the public repo)
+.vscode/
+.husky/
+AGENTS.md
