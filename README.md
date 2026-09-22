@@ -112,7 +112,7 @@ npx supabase stop
 
 The local Studio UI is available at `http://localhost:54323`.
 
-No database tables or migrations are required — this project uses Supabase Auth's built-in `auth.users` table only.
+This project uses Supabase Auth's built-in `auth.users` table, plus any application tables you add as version-controlled SQL migrations — see [Database Migrations](#database-migrations) below for the local authoring workflow.
 
 ### Using a cloud Supabase project instead
 
@@ -137,6 +137,28 @@ By default Supabase requires email confirmation before a user can sign in. To sk
 3. Toggle it **off**
 
 Users can then sign in immediately after sign-up without clicking a confirmation link.
+
+### Database Migrations
+
+Schema changes are version-controlled as SQL files under `supabase/migrations/`.
+
+1. Generate a new timestamped migration file:
+
+```bash
+npm run db:new -- <name>
+```
+
+2. Hand-write the DDL in the generated file.
+
+3. Re-apply all migrations (plus the seed script) against your local instance to verify:
+
+```bash
+npm run db:reset
+```
+
+4. Commit the migration file.
+
+CI's `smoke` job already applies any committed migration automatically — it runs `supabase start` against a fresh instance on every run — so no separate CI step is needed to keep local and CI databases in sync.
 
 ### Auth routes
 
