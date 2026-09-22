@@ -160,6 +160,20 @@ npm run db:reset
 
 CI's `smoke` job already applies any committed migration automatically — it runs `supabase start` against a fresh instance on every run — so no separate CI step is needed to keep local and CI databases in sync.
 
+#### Production deploys
+
+The `deploy` job in `.github/workflows/ci.yml` automatically pushes any committed migrations to the linked production Supabase project on merge to `main`, before the Worker code deploys. This requires three repository secrets, set once:
+
+| Secret                    | Where to find it                                              |
+| -------------------------- | --------------------------------------------------------------- |
+| `SUPABASE_ACCESS_TOKEN`    | Supabase dashboard → Account → Access Tokens                    |
+| `SUPABASE_DB_PASSWORD`     | Supabase dashboard → your project → Settings → Database          |
+| `SUPABASE_PROJECT_REF`     | Supabase dashboard → your project → Settings → API (or the project URL) |
+
+If any of the three secrets is unset, the push step is skipped and the rest of the `deploy` job still runs.
+
+> **Note:** `wrangler rollback` never reverts schema changes. Keep migrations backward-compatible for at least one deploy cycle so a Worker rollback doesn't break against newer schema.
+
 ### Auth routes
 
 | Route                 | Description                                                             |
