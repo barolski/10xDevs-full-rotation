@@ -60,6 +60,9 @@ jobs:
     needs: [ci, smoke]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     env:
       SUPABASE_MIGRATIONS_READY: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' && secrets.SUPABASE_DB_PASSWORD != '' && secrets.SUPABASE_PROJECT_REF != '' }}
     steps:
@@ -69,9 +72,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
       - name: Push Supabase migrations
         if: ${{ env.SUPABASE_MIGRATIONS_READY == 'true' }}
         env:
@@ -79,8 +79,8 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          supabase link --project-ref "$SUPABASE_PROJECT_REF"
-          supabase db push --yes
+          npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          npx supabase db push --yes
       - run: npx wrangler types
       - run: npx astro sync
       - run: npm run build
