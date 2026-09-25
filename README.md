@@ -164,15 +164,33 @@ CI's `smoke` job already applies any committed migration automatically — it ru
 
 The `deploy` job in `.github/workflows/ci.yml` automatically pushes any committed migrations to the linked production Supabase project on merge to `main`, before the Worker code deploys. This requires three repository secrets, set once:
 
-| Secret                    | Where to find it                                              |
-| -------------------------- | --------------------------------------------------------------- |
-| `SUPABASE_ACCESS_TOKEN`    | Supabase dashboard → Account → Access Tokens                    |
-| `SUPABASE_DB_PASSWORD`     | Supabase dashboard → your project → Settings → Database          |
-| `SUPABASE_PROJECT_REF`     | Supabase dashboard → your project → Settings → API (or the project URL) |
+| Secret                  | Where to find it                                                        |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `SUPABASE_ACCESS_TOKEN` | Supabase dashboard → Account → Access Tokens                            |
+| `SUPABASE_DB_PASSWORD`  | Supabase dashboard → your project → Settings → Database                 |
+| `SUPABASE_PROJECT_REF`  | Supabase dashboard → your project → Settings → API (or the project URL) |
 
 If any of the three secrets is unset, the push step is skipped and the rest of the `deploy` job still runs.
 
 > **Note:** `wrangler rollback` never reverts schema changes. Keep migrations backward-compatible for at least one deploy cycle so a Worker rollback doesn't break against newer schema.
+
+### Organizer accounts
+
+An account is an organizer when it has a row in `public.organizers`. Being an organizer adds permissions on top of a regular player account: organizers can still sign up for and play in trainings. No client can grant the role; it is managed with SQL only.
+
+**Local and CI:** `supabase/seed.sql` creates an organizer account, `organizer@example.com` / `Organizer-Passw0rd!`, on every fresh `supabase start` and `npm run db:reset`. The seed is local-only and is never pushed to production.
+
+**Production:** the person signs up normally, then the project owner runs this in the Supabase dashboard's SQL editor:
+
+```sql
+-- grant
+insert into public.organizers (user_id) select id from auth.users where email = '<email>';
+
+-- revoke
+delete from public.organizers where user_id = (select id from auth.users where email = '<email>');
+```
+
+The change takes effect on the user's next request; no sign-out is needed.
 
 ### Auth routes
 
