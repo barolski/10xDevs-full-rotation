@@ -43,6 +43,7 @@ const steps = [
   ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
   ["organizer page redirects anonymous user", () => request("/organizer"), { status: 302, location: "/auth/signin" }],
   ["organizer api rejects anonymous user", () => request("/api/organizer/me"), { status: 401 }],
+  ["signin page renders for anonymous user", () => request("/auth/signin"), { status: 200 }],
   [
     "signup creates account",
     () => request("/api/auth/signup", { method: "POST", form: { email, password } }),
@@ -59,6 +60,8 @@ const steps = [
     { status: 302, location: "/" },
   ],
   ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
+  ["signin page redirects signed-in user", () => request("/auth/signin"), { status: 302, location: "/dashboard" }],
+  ["signup page redirects signed-in user", () => request("/auth/signup"), { status: 302, location: "/dashboard" }],
   ["organizer page forbids player", () => request("/organizer"), { status: 403 }],
   ["organizer api forbids player", () => request("/api/organizer/me"), { status: 403 }],
   ["signout clears session", () => request("/api/auth/signout", { method: "POST" }), { status: 302, location: "/" }],

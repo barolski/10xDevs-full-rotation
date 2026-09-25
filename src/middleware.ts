@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase";
 
 const PROTECTED_ROUTES = ["/dashboard"];
 const ORGANIZER_ROUTES = ["/organizer", "/api/organizer"];
+// Sign-in/up forms make no sense for a signed-in user; send them to the app instead.
+const AUTH_ROUTES = ["/auth/signin", "/auth/signup"];
 
 function matchesRoute(pathname: string, route: string) {
   return pathname === route || pathname.startsWith(`${route}/`);
@@ -33,6 +35,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const { pathname } = context.url;
+
+  if (context.locals.user && AUTH_ROUTES.some((route) => matchesRoute(pathname, route))) {
+    return context.redirect("/dashboard");
+  }
 
   if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
     if (!context.locals.user) {

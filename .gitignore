@@ -39,3 +39,6 @@ AGENTS.md
 
 # 10xDevs toolkit context (local-only, not for the public repo)
 context/
+
+# Supabase Studio local SQL snippets (scratch queries, may touch auth data)
+supabase/snippets/

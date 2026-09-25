@@ -5,13 +5,15 @@ import { missingConfigs } from "@/lib/config-status";
 
 interface Props {
   title?: string;
+  // Picks the token set from global.css: `.dark` or plain `:root`. Dark is the app default.
+  theme?: "dark" | "light";
 }
 
-const { title = "10x Astro Starter" } = Astro.props;
+const { title = "10x Astro Starter", theme = "dark" } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class:list={[{ dark: theme === "dark" }]}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
