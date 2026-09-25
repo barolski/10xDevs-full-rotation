@@ -4,6 +4,9 @@
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4321";
 const email = `smoke-${Date.now()}@example.com`;
 const password = "Smoke-Test-Passw0rd!";
+// Defaults match the local/CI-only organizer created by supabase/seed.sql.
+const organizerEmail = process.env.SMOKE_ORGANIZER_EMAIL ?? "organizer@example.com";
+const organizerPassword = process.env.SMOKE_ORGANIZER_PASSWORD ?? "Organizer-Passw0rd!";
 const jar = new Map();
 
 function cookieHeader() {
@@ -38,6 +41,8 @@ async function request(path, { method = "GET", form } = {}) {
 const steps = [
   ["home renders", () => request("/"), { status: 200 }],
   ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
+  ["organizer page redirects anonymous user", () => request("/organizer"), { status: 302, location: "/auth/signin" }],
+  ["organizer api rejects anonymous user", () => request("/api/organizer/me"), { status: 401 }],
   [
     "signup creates account",
     () => request("/api/auth/signup", { method: "POST", form: { email, password } }),
@@ -54,16 +59,35 @@ const steps = [
     { status: 302, location: "/" },
   ],
   ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
+  ["organizer page forbids player", () => request("/organizer"), { status: 403 }],
+  ["organizer api forbids player", () => request("/api/organizer/me"), { status: 403 }],
   ["signout clears session", () => request("/api/auth/signout", { method: "POST" }), { status: 302, location: "/" }],
   ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
+  [
+    "signin accepts seeded organizer",
+    () => request("/api/auth/signin", { method: "POST", form: { email: organizerEmail, password: organizerPassword } }),
+    { status: 302, location: "/" },
+  ],
+  ["organizer page renders for organizer", () => request("/organizer"), { status: 200 }],
+  ["organizer api allows organizer", () => request("/api/organizer/me"), { status: 200 }],
+  [
+    "signout clears organizer session",
+    () => request("/api/auth/signout", { method: "POST" }),
+    { status: 302, location: "/" },
+  ],
 ];
+
+// An expected location with a query ("/auth/signin?error=") is a prefix; anything else must match exactly,
+// otherwise "/" would accept every redirect.
+function locationMatches(actual, expected) {
+  if (expected === undefined) return true;
+  return expected.includes("?") ? actual.startsWith(expected) : actual === expected;
+}
 
 let failed = 0;
 for (const [name, run, expected] of steps) {
   const actual = await run();
-  const ok =
-    actual.status === expected.status &&
-    (expected.location === undefined || actual.location.startsWith(expected.location));
+  const ok = actual.status === expected.status && locationMatches(actual.location, expected.location);
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}  -> ${actual.status} ${actual.location}`);
   if (!ok) {
     failed++;

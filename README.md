@@ -164,15 +164,33 @@ CI's `smoke` job already applies any committed migration automatically — it ru
 
 The `deploy` job in `.github/workflows/ci.yml` automatically pushes any committed migrations to the linked production Supabase project on merge to `main`, before the Worker code deploys. This requires three repository secrets, set once:
 
-| Secret                    | Where to find it                                              |
-| -------------------------- | --------------------------------------------------------------- |
-| `SUPABASE_ACCESS_TOKEN`    | Supabase dashboard → Account → Access Tokens                    |
-| `SUPABASE_DB_PASSWORD`     | Supabase dashboard → your project → Settings → Database          |
-| `SUPABASE_PROJECT_REF`     | Supabase dashboard → your project → Settings → API (or the project URL) |
+| Secret                  | Where to find it                                                        |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `SUPABASE_ACCESS_TOKEN` | Supabase dashboard → Account → Access Tokens                            |
+| `SUPABASE_DB_PASSWORD`  | Supabase dashboard → your project → Settings → Database                 |
+| `SUPABASE_PROJECT_REF`  | Supabase dashboard → your project → Settings → API (or the project URL) |
 
 If any of the three secrets is unset, the push step is skipped and the rest of the `deploy` job still runs.
 
 > **Note:** `wrangler rollback` never reverts schema changes. Keep migrations backward-compatible for at least one deploy cycle so a Worker rollback doesn't break against newer schema.
+
+### Organizer accounts
+
+An account is an organizer when it has a row in `public.organizers`. Being an organizer adds permissions on top of a regular player account: organizers can still sign up for and play in trainings. No client can grant the role; it is managed with SQL only.
+
+**Local and CI:** `supabase/seed.sql` creates an organizer account, `organizer@example.com` / `Organizer-Passw0rd!`, on every fresh `supabase start` and `npm run db:reset`. The seed is local-only and is never pushed to production.
+
+**Production:** the person signs up normally, then the project owner runs this in the Supabase dashboard's SQL editor:
+
+```sql
+-- grant
+insert into public.organizers (user_id) select id from auth.users where email = '<email>';
+
+-- revoke
+delete from public.organizers where user_id = (select id from auth.users where email = '<email>');
+```
+
+The change takes effect on the user's next request; no sign-out is needed.
 
 ### Auth routes
 
@@ -205,14 +223,20 @@ Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or
 
 ## Smoke test
 
-`scripts/smoke.mjs` is a dependency-free Node script that walks the whole auth flow (sign-up, sign-in, protected page, sign-out) over HTTP. Run it against the dev server or the production preview after dependency upgrades:
+`scripts/smoke.mjs` is a dependency-free Node script that walks the whole auth flow (sign-up, sign-in, protected page, sign-out) and the organizer gate (anonymous / player / organizer) over HTTP. Run it against the dev server or the production preview after dependency upgrades.
+
+It needs a **local** Supabase instance: the organizer steps sign in as the seeded `organizer@example.com` (see [Organizer accounts](#organizer-accounts)), which only exists locally and in CI.
+
+1. Start local Supabase and apply the seed: `npm run db:start && npm run db:reset`.
+2. Point `.dev.vars` at it: `SUPABASE_URL` = `API_URL` and `SUPABASE_KEY` = `ANON_KEY` from `npx supabase status -o env`.
+3. Run the app and the smoke test:
 
 ```bash
 npm run dev            # or: npm run build && npm run preview
 BASE_URL=http://localhost:4321 npm run smoke
 ```
 
-It needs a reachable Supabase instance (local or cloud) with email confirmation disabled.
+> **Warning:** `npm run build` copies `.dev.vars` into `dist/server/.dev.vars`, so a build made while `.dev.vars` pointed at a cloud project keeps using it in `npm run preview`. Rebuild after switching. Never run the smoke test against production Supabase: each run creates a real `smoke-*@example.com` account there.
 
 > **Note:** this script exists primarily to guard the development of the starter itself — it is a fast sanity check that dependency upgrades did not break the build, the Cloudflare adapter or the Supabase auth flow. It is **not** a substitute for a real test suite. Once you build your own product on top of this starter, add proper tests (unit, integration, end-to-end) suited to your application.
 
