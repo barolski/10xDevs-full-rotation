@@ -1,7 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 
-const { user } = Astro.locals;
+const { user, isOrganizer } = Astro.locals;
 ---
 
 <Layout title="Dashboard">
@@ -14,6 +14,11 @@ const { user } = Astro.locals;
         Welcome, <span class="font-semibold text-white">{user?.email}</span>
       </p>
       <p class="mt-2 text-sm text-blue-100/50">This page is only for authenticated users.</p>
+      {isOrganizer && (
+        <a href="/organizer" class="mt-4 inline-block text-sm text-purple-300 hover:underline">
+          Organizer area
+        </a>
+      )}
       <form method="POST" action="/api/auth/signout" class="mt-6">
         <button
           type="submit"
