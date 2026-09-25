@@ -223,14 +223,20 @@ Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or
 
 ## Smoke test
 
-`scripts/smoke.mjs` is a dependency-free Node script that walks the whole auth flow (sign-up, sign-in, protected page, sign-out) over HTTP. Run it against the dev server or the production preview after dependency upgrades:
+`scripts/smoke.mjs` is a dependency-free Node script that walks the whole auth flow (sign-up, sign-in, protected page, sign-out) and the organizer gate (anonymous / player / organizer) over HTTP. Run it against the dev server or the production preview after dependency upgrades.
+
+It needs a **local** Supabase instance: the organizer steps sign in as the seeded `organizer@example.com` (see [Organizer accounts](#organizer-accounts)), which only exists locally and in CI.
+
+1. Start local Supabase and apply the seed: `npm run db:start && npm run db:reset`.
+2. Point `.dev.vars` at it: `SUPABASE_URL` = `API_URL` and `SUPABASE_KEY` = `ANON_KEY` from `npx supabase status -o env`.
+3. Run the app and the smoke test:
 
 ```bash
 npm run dev            # or: npm run build && npm run preview
 BASE_URL=http://localhost:4321 npm run smoke
 ```
 
-It needs a reachable Supabase instance (local or cloud) with email confirmation disabled.
+> **Warning:** `npm run build` copies `.dev.vars` into `dist/server/.dev.vars`, so a build made while `.dev.vars` pointed at a cloud project keeps using it in `npm run preview`. Rebuild after switching. Never run the smoke test against production Supabase: each run creates a real `smoke-*@example.com` account there.
 
 > **Note:** this script exists primarily to guard the development of the starter itself — it is a fast sanity check that dependency upgrades did not break the build, the Cloudflare adapter or the Supabase auth flow. It is **not** a substitute for a real test suite. Once you build your own product on top of this starter, add proper tests (unit, integration, end-to-end) suited to your application.
 

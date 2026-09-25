@@ -77,12 +77,17 @@ const steps = [
   ],
 ];
 
+// An expected location with a query ("/auth/signin?error=") is a prefix; anything else must match exactly,
+// otherwise "/" would accept every redirect.
+function locationMatches(actual, expected) {
+  if (expected === undefined) return true;
+  return expected.includes("?") ? actual.startsWith(expected) : actual === expected;
+}
+
 let failed = 0;
 for (const [name, run, expected] of steps) {
   const actual = await run();
-  const ok =
-    actual.status === expected.status &&
-    (expected.location === undefined || actual.location.startsWith(expected.location));
+  const ok = actual.status === expected.status && locationMatches(actual.location, expected.location);
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}  -> ${actual.status} ${actual.location}`);
   if (!ok) {
     failed++;
