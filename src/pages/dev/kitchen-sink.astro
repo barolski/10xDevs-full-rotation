@@ -1,0 +1,33 @@
+---
+// Dev-only visual gate for change auth-ui-amber: every named state of the auth view on one page.
+// Hover and focus cannot be forced statically; capture those by hovering/tabbing on the real pages.
+import Layout from "@/layouts/Layout.astro";
+import { AuthKitchenSink } from "@/components/dev/AuthKitchenSink";
+
+// Production: empty 404. No frontmatter `return` here; it crashes typescript-eslint on .astro files.
+const isDev = import.meta.env.DEV;
+if (!isDev) {
+  Astro.response.status = 404;
+}
+
+const theme = Astro.url.searchParams.get("theme") === "light" ? "light" : "dark";
+---
+
+{isDev && (
+  <Layout title="Kitchen sink: auth" theme={theme}>
+    <main class="bg-background text-foreground min-h-screen space-y-8 p-4 sm:p-8">
+      <header class="flex flex-wrap items-baseline justify-between gap-2">
+        <h1 class="text-2xl font-semibold">Auth kitchen sink ({theme})</h1>
+        <nav class="text-muted-foreground flex gap-3 text-sm">
+          <a class="text-foreground underline underline-offset-4" href="?theme=dark">
+            Dark
+          </a>
+          <a class="text-foreground underline underline-offset-4" href="?theme=light">
+            Light
+          </a>
+        </nav>
+      </header>
+      <AuthKitchenSink />
+    </main>
+  </Layout>
+)}

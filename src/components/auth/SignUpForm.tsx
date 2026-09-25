@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Mail, Lock, UserPlus } from "lucide-react";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
@@ -17,6 +17,7 @@ export default function SignUpForm({ serverError }: Props) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
 
   function validate() {
@@ -41,26 +42,44 @@ export default function SignUpForm({ serverError }: Props) {
     }
 
     setErrors(next);
-    return Object.keys(next).length === 0;
+    return next;
   }
 
   function clearError(field: keyof typeof errors) {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
-  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    if (!validate()) {
-      e.preventDefault();
+  // Back from the next page can restore this one from bfcache with the button still pending.
+  useEffect(() => {
+    function resetOnRestore(e: PageTransitionEvent) {
+      if (e.persisted) setSubmitting(false);
     }
+    window.addEventListener("pageshow", resetOnRestore);
+    return () => {
+      window.removeEventListener("pageshow", resetOnRestore);
+    };
+  }, []);
+
+  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+    const firstInvalid = Object.keys(validate())[0];
+    if (firstInvalid) {
+      e.preventDefault();
+      // Focus after React commits aria-invalid + the error text, so screen readers announce both.
+      const form = e.currentTarget;
+      setTimeout(() => {
+        (form.elements.namedItem(firstInvalid) as HTMLInputElement | null)?.focus();
+      }, 0);
+      return;
+    }
+    // Native POST continues; inputs stay enabled so their values are submitted.
+    setSubmitting(true);
   }
 
+  const remaining = MIN_PASSWORD_LENGTH - password.length;
   const passwordHint =
-    !errors.password && password.length > 0 && password.length < MIN_PASSWORD_LENGTH ? (
-      <p className="mt-1 text-xs text-blue-100/50">
-        {MIN_PASSWORD_LENGTH - password.length} more character
-        {MIN_PASSWORD_LENGTH - password.length !== 1 ? "s" : ""} needed
-      </p>
-    ) : undefined;
+    !errors.password && password.length > 0 && remaining > 0
+      ? `${remaining} more character${remaining !== 1 ? "s" : ""} needed`
+      : undefined;
 
   return (
     <form method="POST" action="/api/auth/signup" className="space-y-4" onSubmit={handleSubmit} noValidate>
@@ -126,7 +145,7 @@ export default function SignUpForm({ serverError }: Props) {
 
       <ServerError message={serverError} />
 
-      <SubmitButton pendingText="Creating account..." icon={<UserPlus className="size-4" />}>
+      <SubmitButton pending={submitting} pendingText="Creating account..." icon={<UserPlus className="size-4" />}>
         Create account
       </SubmitButton>
     </form>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Mail, Lock, LogIn } from "lucide-react";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
@@ -13,6 +13,7 @@ export default function SignInForm({ serverError }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   function validate() {
@@ -26,17 +27,37 @@ export default function SignInForm({ serverError }: Props) {
       next.password = "Password is required";
     }
     setErrors(next);
-    return Object.keys(next).length === 0;
+    return next;
   }
 
   function clearError(field: keyof typeof errors) {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
-  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    if (!validate()) {
-      e.preventDefault();
+  // Back from the next page can restore this one from bfcache with the button still pending.
+  useEffect(() => {
+    function resetOnRestore(e: PageTransitionEvent) {
+      if (e.persisted) setSubmitting(false);
     }
+    window.addEventListener("pageshow", resetOnRestore);
+    return () => {
+      window.removeEventListener("pageshow", resetOnRestore);
+    };
+  }, []);
+
+  function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+    const firstInvalid = Object.keys(validate())[0];
+    if (firstInvalid) {
+      e.preventDefault();
+      // Focus after React commits aria-invalid + the error text, so screen readers announce both.
+      const form = e.currentTarget;
+      setTimeout(() => {
+        (form.elements.namedItem(firstInvalid) as HTMLInputElement | null)?.focus();
+      }, 0);
+      return;
+    }
+    // Native POST continues; inputs stay enabled so their values are submitted.
+    setSubmitting(true);
   }
 
   return (
@@ -79,7 +100,7 @@ export default function SignInForm({ serverError }: Props) {
 
       <ServerError message={serverError} />
 
-      <SubmitButton pendingText="Signing in..." icon={<LogIn className="size-4" />}>
+      <SubmitButton pending={submitting} pendingText="Signing in..." icon={<LogIn className="size-4" />}>
         Sign in
       </SubmitButton>
     </form>
