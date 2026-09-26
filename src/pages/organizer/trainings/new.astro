@@ -1,0 +1,37 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import TrainingForm from "@/components/trainings/TrainingForm";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { trainingErrorMessage } from "@/lib/trainings";
+
+const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
+---
+
+<Layout title="New training">
+  <main class="bg-background text-foreground min-h-screen p-4 sm:p-8">
+    <div class="mx-auto w-full max-w-md space-y-4">
+      <a
+        href="/organizer"
+        class="text-muted-foreground hover:text-foreground inline-block text-sm underline underline-offset-4"
+      >
+        Back to trainings
+      </a>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            <h1>New training</h1>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TrainingForm
+            action="/api/organizer/trainings"
+            serverError={error}
+            submitLabel="Create training"
+            pendingText="Creating..."
+            client:load
+          />
+        </CardContent>
+      </Card>
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,56 @@
+---
+// The link organizers share on WhatsApp. Middleware sends anonymous visitors to sign-in with ?next=.
+import Layout from "@/layouts/Layout.astro";
+import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { loadTraining } from "@/lib/training-queries";
+
+const { isOrganizer } = Astro.locals;
+const now = new Date();
+const training = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
+if (!training) {
+  Astro.response.status = 404;
+}
+---
+
+<Layout title={training?.title ?? "Training not found"}>
+  <main class="bg-background text-foreground flex min-h-screen items-start justify-center p-4 sm:items-center">
+    <Card className="w-full max-w-md">
+      {training ? (
+        <>
+          <CardHeader>
+            <CardTitle className="text-2xl">
+              <h1>{training.title}</h1>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <TrainingDetails training={training} now={now} />
+            {/* S-02 (player-signup-and-withdraw) replaces this block with sign-up / withdraw and the rosters. */}
+            <p class="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm">
+              Sign-up opens here soon.
+            </p>
+          </CardContent>
+          {isOrganizer && (
+            <CardFooter>
+              <a href={`/organizer/trainings/${training.id}`} class:list={[buttonVariants({ variant: "outline" })]}>
+                Manage
+              </a>
+            </CardFooter>
+          )}
+        </>
+      ) : (
+        <>
+          <CardHeader>
+            <CardTitle className="text-2xl">
+              <h1>Training not found</h1>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p class="text-muted-foreground text-sm">This training doesn't exist or the link is wrong.</p>
+          </CardContent>
+        </>
+      )}
+    </Card>
+  </main>
+</Layout>

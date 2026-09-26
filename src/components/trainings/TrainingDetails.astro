@@ -1,0 +1,45 @@
+---
+import { CalendarClock, Clock, MapPin, StickyNote } from "lucide-react";
+import { formatTrainingDateTime } from "@/lib/time";
+import { isSignupOpen, signupClosesAt, type Training } from "@/lib/trainings";
+
+interface Props {
+  training: Training;
+  now: Date;
+}
+
+const { training, now } = Astro.props;
+const startsAt = new Date(training.starts_at);
+const open = isSignupOpen(startsAt, now);
+---
+
+<dl class="grid gap-3 text-sm">
+  <div class="flex items-start gap-3">
+    <dt>
+      <CalendarClock className="text-muted-foreground mt-0.5 size-4" aria-label="Start" />
+    </dt>
+    <dd class="font-medium">{formatTrainingDateTime(startsAt)}</dd>
+  </div>
+  <div class="flex items-start gap-3">
+    <dt>
+      <MapPin className="text-muted-foreground mt-0.5 size-4" aria-label="Location" />
+    </dt>
+    <dd>{training.location}</dd>
+  </div>
+  {training.note && (
+    <div class="flex items-start gap-3">
+      <dt>
+        <StickyNote className="text-muted-foreground mt-0.5 size-4" aria-label="Note" />
+      </dt>
+      <dd class="whitespace-pre-line">{training.note}</dd>
+    </div>
+  )}
+  <div class="flex items-start gap-3">
+    <dt>
+      <Clock className="text-muted-foreground mt-0.5 size-4" aria-label="Sign-ups" />
+    </dt>
+    <dd class:list={[open ? "text-primary" : "text-muted-foreground"]}>
+      {open ? `Sign-ups open until ${formatTrainingDateTime(signupClosesAt(startsAt))}` : "Sign-ups are closed"}
+    </dd>
+  </div>
+</dl>

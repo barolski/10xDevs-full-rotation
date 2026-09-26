@@ -192,6 +192,22 @@ delete from public.organizers where user_id = (select id from auth.users where e
 
 The change takes effect on the user's next request; no sign-out is needed.
 
+### Trainings
+
+`public.trainings` holds the trainings organizers create and share as `/t/<id>`. Access is enforced in the database, not only in the app:
+
+- Any signed-in account can read trainings; `anon` has no access.
+- Only organizers (`public.is_organizer()`) can insert or update them, and only the `title`, `starts_at`, `location` and `note` columns. Nobody can delete them.
+- A trigger rejects a training that starts within 3 hours (`training_starts_too_soon`) and any edit once sign-ups have closed, 3 hours before the start (`training_signup_closed`).
+
+**Local only:** to create a training whose sign-ups are already closed (for manual checks), bypass the trigger in a local SQL session. Never do this in production.
+
+```sql
+set session_replication_role = replica;
+insert into public.trainings (title, starts_at, location) values ('Closed training', now() + interval '1 hour', 'Hall');
+set session_replication_role = default;
+```
+
 ### Auth routes
 
 | Route                 | Description                                                             |
