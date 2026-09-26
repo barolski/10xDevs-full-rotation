@@ -10,6 +10,7 @@ const organizerEmail = process.env.SMOKE_ORGANIZER_EMAIL ?? "organizer@example.c
 const organizerPassword = process.env.SMOKE_ORGANIZER_PASSWORD ?? "Organizer-Passw0rd!";
 const jar = new Map();
 const CREATED_LOCATION = /^\/organizer\/trainings\/([0-9a-f-]{36})\?created=1$/;
+const UPDATED_LOCATION = /^\/organizer\/trainings\/[0-9a-f-]{36}\?updated=1$/;
 // Set by the organizer's create step, read by the later player/organizer steps.
 let trainingId = "";
 
@@ -147,6 +148,25 @@ const steps = [
   ["training detail renders for organizer", () => request(`/organizer/trainings/${trainingId}`), { status: 200 }],
   ["organizer list renders with trainings", () => request("/organizer"), { status: 200 }],
   [
+    "training edit page renders for organizer",
+    () => request(`/organizer/trainings/${trainingId}/edit`),
+    { status: 200 },
+  ],
+  [
+    "training edit succeeds for organizer",
+    () =>
+      request(`/api/organizer/trainings/${trainingId}`, {
+        method: "POST",
+        form: { ...trainingForm(48), location: "Smoke hall B" },
+      }),
+    { status: 302, location: UPDATED_LOCATION },
+  ],
+  [
+    "training edit rejects malformed id",
+    () => request("/api/organizer/trainings/not-a-uuid", { method: "POST", form: trainingForm(48) }),
+    { status: 302, location: "/organizer?error=" },
+  ],
+  [
     "signout clears organizer session",
     () => request("/api/auth/signout", { method: "POST" }),
     { status: 302, location: "/" },
@@ -157,6 +177,11 @@ const steps = [
     { status: 302, location: "/" },
   ],
   ["training page renders for player", () => request(`/t/${trainingId}`), { status: 200 }],
+  [
+    "training edit forbids player",
+    () => request(`/api/organizer/trainings/${trainingId}`, { method: "POST", form: trainingForm(48) }),
+    { status: 403 },
+  ],
   ["training page 404s for malformed id", () => request("/t/not-a-uuid"), { status: 404 }],
   [
     "signout clears player session",
