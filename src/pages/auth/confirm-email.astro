@@ -1,4 +1,5 @@
 ---
+import { CircleCheck, MailCheck } from "lucide-react";
 import Layout from "@/layouts/Layout.astro";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { safeNext, withNext } from "@/lib/redirect";
@@ -8,13 +9,15 @@ const isAutoConfirmed = import.meta.env.DEV;
 
 const content = isAutoConfirmed
   ? {
-      emoji: "✅",
+      Icon: CircleCheck,
+      tone: "bg-success-soft text-success-strong",
       heading: "Registration successful",
       description: "Your account has been created. You can now sign in.",
       linkText: "Go to sign in",
     }
   : {
-      emoji: "📧",
+      Icon: MailCheck,
+      tone: "bg-info-soft text-info-strong",
       heading: "Check your email",
       description: "We've sent a confirmation link to your email address. Click it to activate your account.",
       linkText: "Back to sign in",
@@ -22,12 +25,12 @@ const content = isAutoConfirmed
 ---
 
 <Layout title={content.heading}>
-  <main class="bg-background flex min-h-screen items-center justify-center p-4">
+  <main class="flex flex-1 items-center justify-center p-4">
     <Card className="w-full max-w-sm text-center">
-      <CardHeader>
-        <div class="mb-2 text-5xl" aria-hidden="true">
-          {content.emoji}
-        </div>
+      <CardHeader className="justify-items-center gap-3">
+        <span class:list={["inline-flex size-12 items-center justify-center rounded-full", content.tone]}>
+          <content.Icon className="size-6" aria-hidden="true" />
+        </span>
         <CardTitle className="text-2xl">
           <h1>{content.heading}</h1>
         </CardTitle>

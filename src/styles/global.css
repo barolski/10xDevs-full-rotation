@@ -4,85 +4,119 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Colour tokens: shadcn/ui "Amber" preset on the neutral base (components.json baseColor).
- * Source: https://github.com/shadcn-ui/ui/blob/98a1fe67b439324ddc857f47fbdce056600a4329/apps/v4/registry/themes.ts#L523-L554
- * Raw values: context/changes/auth-ui-amber/tokens-amber.css
- * Deviations from the preset (change auth-ui-amber):
- *   - --ring is amber (light = preset chart-3, dark = preset chart-2); the preset leaves it neutral grey.
- *   - --secondary / --secondary-foreground stay neutral; the preset's zinc tint is not adopted.
+ * Colour tokens: the FullRotation design system (change training-view-design-system), built on the
+ * shadcn/ui "Amber" preset (components.json baseColor: neutral).
+ * Amber source: https://github.com/shadcn-ui/ui/blob/98a1fe67b439324ddc857f47fbdce056600a4329/apps/v4/registry/themes.ts#L523-L554
+ * Raw values: context/changes/training-view-design-system/tokens-fullrotation.css
+ *   (previous set: context/archive/2026-09-25-auth-ui-amber/tokens-amber.css)
+ * Deviations from the Amber preset:
+ *   - neutrals are warm sand (light) / warm graphite (dark) instead of pure grey;
+ *   - --ring = --primary in each theme (>= 3:1 on every surface);
+ *   - dark --primary is the preset's chart-2 (amber-500) with a dark foreground (preset sidebar-primary-foreground),
+ *     so amber stays readable as text on dark surfaces;
+ *   - added status tokens (success / warning / info, each with -soft background and -strong text) and
+ *     destructive-foreground / -soft / -strong. Text pairs >= 4.5:1, marks >= 3:1, in both themes.
  */
 :root {
   color-scheme: light;
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --background: #fbf8f3;
+  --foreground: #2a2119;
+  --card: #ffffff;
+  --card-foreground: #2a2119;
+  --popover: #ffffff;
+  --popover-foreground: #2a2119;
   --primary: oklch(0.555 0.163 48.998);
   --primary-foreground: oklch(0.987 0.022 95.277);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --secondary: #f2ebe1;
+  --secondary-foreground: #3a2e23;
+  --muted: #f2ebe1;
+  --muted-foreground: #6f6254;
+  --accent: #fdf0d8;
+  --accent-foreground: oklch(0.473 0.137 46.201);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.666 0.179 58.318);
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #fde9e6;
+  --destructive-strong: #a3261b;
+  /* Status tokens: --x is for marks/icons only (≥ 3:1; --success is 4.48:1 on white). Text uses --x-strong on --x-soft. */
+  --success: #23875a;
+  --success-soft: #e2f4ea;
+  --success-strong: #17603f;
+  --warning: #957600;
+  --warning-soft: #fbf3c9;
+  --warning-strong: #6e5300;
+  --info: #3a6fc2;
+  --info-soft: #e5eefb;
+  --info-strong: #24497f;
+  --border: #e7dfd3;
+  --input: #968878;
+  --ring: oklch(0.555 0.163 48.998);
   --chart-1: oklch(0.879 0.169 91.605);
   --chart-2: oklch(0.769 0.188 70.08);
   --chart-3: oklch(0.666 0.179 58.318);
   --chart-4: oklch(0.555 0.163 48.998);
   --chart-5: oklch(0.473 0.137 46.201);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.666 0.179 58.318);
+  --sidebar: #f6f1ea;
+  --sidebar-foreground: #2a2119;
+  --sidebar-primary: oklch(0.555 0.163 48.998);
   --sidebar-primary-foreground: oklch(0.987 0.022 95.277);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-accent: #fdf0d8;
+  --sidebar-accent-foreground: oklch(0.473 0.137 46.201);
+  --sidebar-border: #e7dfd3;
+  --sidebar-ring: oklch(0.555 0.163 48.998);
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.473 0.137 46.201);
-  --primary-foreground: oklch(0.987 0.022 95.277);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: #1b1713;
+  --foreground: #f3ede5;
+  --card: #25201a;
+  --card-foreground: #f3ede5;
+  --popover: #25201a;
+  --popover-foreground: #f3ede5;
+  --primary: oklch(0.769 0.188 70.08);
+  --primary-foreground: oklch(0.279 0.077 45.635);
+  --secondary: #322b23;
+  --secondary-foreground: #f3ede5;
+  --muted: #2e2821;
+  --muted-foreground: #b5a898;
+  --accent: #3b2c19;
+  --accent-foreground: #fcd9a0;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --destructive-foreground: #2a0f0c;
+  --destructive-soft: #3d1d1a;
+  --destructive-strong: #f6b0a7;
+  --success: #4cc38a;
+  --success-soft: #16322a;
+  --success-strong: #95e2bb;
+  --warning: #e3bf45;
+  --warning-soft: #352d12;
+  --warning-strong: #f1d77f;
+  --info: #7aa7e8;
+  --info-soft: #1a2940;
+  --info-strong: #b6cff6;
+  --border: #3a3229;
+  --input: #7d7163;
   --ring: oklch(0.769 0.188 70.08);
   --chart-1: oklch(0.879 0.169 91.605);
   --chart-2: oklch(0.769 0.188 70.08);
   --chart-3: oklch(0.666 0.179 58.318);
   --chart-4: oklch(0.555 0.163 48.998);
   --chart-5: oklch(0.473 0.137 46.201);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: #211c17;
+  --sidebar-foreground: #f3ede5;
   --sidebar-primary: oklch(0.769 0.188 70.08);
   --sidebar-primary-foreground: oklch(0.279 0.077 45.635);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-accent: #3b2c19;
+  --sidebar-accent-foreground: #fcd9a0;
+  --sidebar-border: #3a3229;
+  --sidebar-ring: oklch(0.769 0.188 70.08);
 }
 
 @theme inline {
+  /* Geist / Geist Mono (Vercel, SIL OFL 1.1), self-hosted via @fontsource-variable/geist(-mono), imported in Layout.astro. */
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -102,6 +136,18 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-strong: var(--destructive-strong);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-strong: var(--success-strong);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-strong: var(--warning-strong);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-strong: var(--info-strong);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -118,10 +164,6 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-}
-
-@utility bg-cosmic {
-  background-image: linear-gradient(to bottom, #0a0e1a, #0f1529, #0a0e1a);
 }
 
 @layer base {

@@ -1,0 +1,87 @@
+---
+// Dev-only visual gate for change training-view-design-system: every state of the player training view
+// (/t/[id]) on one page, rendered through the same PlayerTrainingCard the page uses.
+// Theme is forced for the whole page (?theme=light|dark) because `dark:` utilities match descendants of `.dark`.
+// Hover and focus cannot be forced statically; capture those by hovering/tabbing on this page.
+import Layout from "@/layouts/Layout.astro";
+import ThemeToggle from "@/components/ThemeToggle";
+import PlayerTrainingCard from "@/components/trainings/PlayerTrainingCard.astro";
+import { unavailableTraining } from "@/lib/training-queries";
+import type { Training } from "@/lib/trainings";
+
+// Production: empty 404. No frontmatter `return` here; it crashes typescript-eslint on .astro files.
+const isDev = import.meta.env.DEV;
+if (!isDev) {
+  Astro.response.status = 404;
+}
+
+const theme = Astro.url.searchParams.get("theme") === "dark" ? "dark" : "light";
+
+// Fixed clock so the open/closed states don't drift: Thu 1 Oct 2026, 12:00 Warsaw.
+const now = new Date("2026-10-01T10:00:00Z");
+const base: Training = {
+  id: "00000000-0000-0000-0000-000000000001",
+  title: "Thursday volleyball",
+  starts_at: "2026-10-02T17:00:00Z",
+  location: "SP 12 sports hall, ul. Sportowa 4, Kraków",
+  note: "Bring indoor shoes. Hall doors open at 18:45.",
+};
+const states: { label: string; training: Training | null; failed?: boolean; organizer?: boolean }[] = [
+  { label: "Open, with note", training: base },
+  {
+    label: "Open, no note, long title and location",
+    training: {
+      ...base,
+      id: "00000000-0000-0000-0000-000000000002",
+      title: "Friday evening mixed volleyball for the whole group, beginners welcome",
+      location: "Centrum Sportowo-Rekreacyjne Politechniki Krakowskiej, hala nr 2, ul. Kamieńskiego 17, Kraków",
+      note: null,
+    },
+  },
+  {
+    label: "Closed (starts in under 3 h)",
+    training: { ...base, id: "00000000-0000-0000-0000-000000000003", starts_at: "2026-10-01T12:00:00Z", note: null },
+  },
+  { label: "Organizer viewing (Manage)", training: base, organizer: true },
+  { label: "Not found", training: null },
+  { label: "Load failed", training: null, failed: true },
+];
+---
+
+{isDev && (
+  <Layout title="Kitchen sink: training view" theme={theme}>
+    <main class="flex-1 space-y-8 p-4 sm:p-8">
+      <header class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-2xl font-semibold">Training view kitchen sink ({theme})</h1>
+        <nav class="text-muted-foreground flex gap-3 text-sm">
+          <a class="text-foreground underline underline-offset-4" href="?theme=light">
+            Light
+          </a>
+          <a class="text-foreground underline underline-offset-4" href="?theme=dark">
+            Dark
+          </a>
+        </nav>
+      </header>
+      <section class="space-y-3">
+        <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Theme toggle (full, compact)</h2>
+        <div class="flex flex-wrap items-center gap-3">
+          <ThemeToggle client:load />
+          <ThemeToggle compact client:load />
+        </div>
+      </section>
+      <div class="grid items-start gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {states.map((state) => (
+          <section class="max-w-md space-y-2">
+            <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">{state.label}</h2>
+            <PlayerTrainingCard
+              training={state.training}
+              unavailable={unavailableTraining(state.failed ?? false)}
+              now={now}
+              isOrganizer={state.organizer ?? false}
+            />
+          </section>
+        ))}
+      </div>
+    </main>
+  </Layout>
+)}

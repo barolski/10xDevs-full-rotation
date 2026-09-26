@@ -1,26 +1,46 @@
 ---
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import "../styles/global.css";
+import AppHeader from "@/components/AppHeader.astro";
 import Banner from "@/components/Banner.astro";
 import { missingConfigs } from "@/lib/config-status";
+import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 interface Props {
   title?: string;
-  // Picks the token set from global.css: `.dark` or plain `:root`. Dark is the app default.
+  // Forces a token set from global.css (`.dark` or plain `:root`), e.g. for the dev kitchen sinks.
+  // Without it the player's stored choice (ThemeToggle) or the system setting decides, before first paint.
   theme?: "dark" | "light";
 }
 
-const { title = "10x Astro Starter", theme = "dark" } = Astro.props;
+const { title = "FullRotation", theme } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en" class:list={[{ dark: theme === "dark" }]}>
+<html lang="en" class:list={[{ dark: theme === "dark" }]} data-theme-forced={theme}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>{title}</title>
+    {!theme && <script is:inline define:vars={{ storageKey: THEME_STORAGE_KEY }}>
+      // Pre-paint copy of readThemePreference/applyThemePreference in src/lib/theme.ts: keep the two in sync.
+      (function () {
+        var preference = "system";
+        try {
+          preference = window.localStorage.getItem(storageKey) || "system";
+        } catch (e) {
+          // Storage unavailable: follow the system setting.
+        }
+        var dark =
+          preference === "dark" ||
+          (preference !== "light" && !!window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+      })();
+    </script>}
   </head>
-  <body>
+  <body class="flex min-h-dvh flex-col">
     {missingConfigs.map((cfg) => (
       <Banner variant="error">
         <strong>Uwaga:</strong> {cfg.message}
@@ -35,15 +55,9 @@ const { title = "10x Astro Starter", theme = "dark" } = Astro.props;
         )}
       </Banner>
     ))}
-    <slot />
+    <AppHeader />
+    <div class="flex flex-1 flex-col">
+      <slot />
+    </div>
   </body>
 </html>
-
-<style>
-  html,
-  body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-  }
-</style>
