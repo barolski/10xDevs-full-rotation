@@ -1,0 +1,84 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
+import CopyLinkButton from "@/components/trainings/CopyLinkButton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { loadTraining } from "@/lib/training-queries";
+import { isSignupOpen } from "@/lib/trainings";
+
+const now = new Date();
+const training = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
+if (!training) {
+  Astro.response.status = 404;
+}
+
+const shareUrl = training ? new URL(`/t/${training.id}`, Astro.url.origin).toString() : "";
+const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
+const notice = Astro.url.searchParams.has("created")
+  ? "Training created. Copy the link and share it with the group."
+  : Astro.url.searchParams.has("updated")
+    ? "Training updated."
+    : null;
+---
+
+<Layout title={training?.title ?? "Training not found"}>
+  <main class="bg-background text-foreground min-h-screen p-4 sm:p-8">
+    <div class="mx-auto w-full max-w-md space-y-4">
+      <a
+        href="/organizer"
+        class="text-muted-foreground hover:text-foreground inline-block text-sm underline underline-offset-4"
+      >
+        Back to trainings
+      </a>
+      {training ? (
+        <>
+          {notice && (
+            <Alert>
+              <AlertDescription>{notice}</AlertDescription>
+            </Alert>
+          )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">
+                <h1>{training.title}</h1>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <TrainingDetails training={training} now={now} />
+              <section class="space-y-2">
+                <h2 class="text-sm font-medium">Sign-up link</h2>
+                <CopyLinkButton url={shareUrl} client:load />
+              </section>
+            </CardContent>
+            <CardFooter className="gap-3">
+              {open && (
+                <a
+                  href={`/organizer/trainings/${training.id}/edit`}
+                  class:list={[buttonVariants({ variant: "outline" })]}
+                >
+                  Edit
+                </a>
+              )}
+              <a href={`/t/${training.id}`} class:list={[buttonVariants({ variant: "ghost" })]}>
+                Open player view
+              </a>
+            </CardFooter>
+          </Card>
+        </>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">
+              <h1>Training not found</h1>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p class="text-muted-foreground text-sm">This training doesn't exist or the link is wrong.</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  </main>
+</Layout>

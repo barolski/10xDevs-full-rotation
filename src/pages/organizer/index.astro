@@ -1,22 +1,120 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase";
+import { formatTrainingDateTime } from "@/lib/time";
+import { isSignupOpen, TRAINING_COLUMNS, trainingErrorMessage, type Training } from "@/lib/trainings";
 
-const { user } = Astro.locals;
+const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
+const now = new Date();
+const nowIso = now.toISOString();
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+let upcoming: Training[] = [];
+let past: Training[] = [];
+let loadFailed = !supabase;
+
+if (supabase) {
+  const [upcomingResult, pastResult] = await Promise.all([
+    supabase
+      .from("trainings")
+      .select(TRAINING_COLUMNS)
+      .gte("starts_at", nowIso)
+      .order("starts_at", { ascending: true })
+      .overrideTypes<Training[], { merge: false }>(),
+    supabase
+      .from("trainings")
+      .select(TRAINING_COLUMNS)
+      .lt("starts_at", nowIso)
+      .order("starts_at", { ascending: false })
+      .limit(20)
+      .overrideTypes<Training[], { merge: false }>(),
+  ]);
+  loadFailed = Boolean(upcomingResult.error ?? pastResult.error);
+  upcoming = upcomingResult.data ?? [];
+  past = pastResult.data ?? [];
+}
+
+const sections = [
+  { heading: "Upcoming", items: upcoming, empty: "No upcoming trainings yet." },
+  { heading: "Past", items: past, empty: "No past trainings." },
+];
 ---
 
-<Layout title="Organizer area">
-  <div class="bg-cosmic flex min-h-screen items-center justify-center p-4">
-    <div class="rounded-2xl border border-white/10 bg-white/10 p-8 text-center text-white backdrop-blur-xl">
-      <h1 class="mb-4 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
-        Organizer area
-      </h1>
-      <p class="text-blue-100/80">
-        Signed in as <span class="font-semibold text-white">{user?.email}</span>
-      </p>
-      <p class="mt-2 text-sm text-blue-100/50">Organizer tools will appear here in upcoming releases.</p>
-      <a href="/dashboard" class="mt-6 inline-block text-sm text-purple-300 hover:underline">
+<Layout title="Trainings">
+  <main class="bg-background text-foreground min-h-screen p-4 sm:p-8">
+    <div class="mx-auto w-full max-w-2xl space-y-6">
+      <header class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-2xl font-semibold">Trainings</h1>
+        <a href="/organizer/trainings/new" class:list={[buttonVariants()]}>
+          New training
+        </a>
+      </header>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {loadFailed && (
+        <Alert variant="destructive">
+          <AlertDescription>Could not load trainings. Please refresh the page.</AlertDescription>
+        </Alert>
+      )}
+
+      {sections.map(({ heading, items, empty }) => (
+        <Card className="gap-4">
+          <CardHeader>
+            <CardTitle>
+              <h2>{heading}</h2>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {items.length === 0 ? (
+              <p class="text-muted-foreground text-sm">{empty}</p>
+            ) : (
+              <ul class="divide-border divide-y">
+                {items.map((training) => {
+                  const startsAt = new Date(training.starts_at);
+                  const open = isSignupOpen(startsAt, now);
+                  return (
+                    <li>
+                      <a
+                        href={`/organizer/trainings/${training.id}`}
+                        class="hover:bg-accent/50 -mx-2 flex items-start justify-between gap-3 rounded-md px-2 py-3"
+                      >
+                        <span class="min-w-0">
+                          <span class="block truncate font-medium">{training.title}</span>
+                          <span class="text-muted-foreground block text-sm">
+                            {formatTrainingDateTime(startsAt)} · {training.location}
+                          </span>
+                        </span>
+                        <span
+                          class:list={[
+                            "shrink-0 rounded-full border px-2 py-0.5 text-xs",
+                            open ? "border-primary text-primary" : "text-muted-foreground",
+                          ]}
+                        >
+                          {open ? "Sign-ups open" : "Sign-ups closed"}
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+
+      <a
+        href="/dashboard"
+        class="text-muted-foreground hover:text-foreground inline-block text-sm underline underline-offset-4"
+      >
         Back to dashboard
       </a>
     </div>
-  </div>
+  </main>
 </Layout>
