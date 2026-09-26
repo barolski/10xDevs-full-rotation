@@ -2,6 +2,7 @@
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "../styles/global.css";
+import AppHeader from "@/components/AppHeader.astro";
 import Banner from "@/components/Banner.astro";
 import { missingConfigs } from "@/lib/config-status";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
@@ -13,7 +14,7 @@ interface Props {
   theme?: "dark" | "light";
 }
 
-const { title = "10x Astro Starter", theme } = Astro.props;
+const { title = "FullRotation", theme } = Astro.props;
 ---
 
 <!doctype html>
@@ -39,7 +40,7 @@ const { title = "10x Astro Starter", theme } = Astro.props;
       })();
     </script>}
   </head>
-  <body>
+  <body class="flex min-h-dvh flex-col">
     {missingConfigs.map((cfg) => (
       <Banner variant="error">
         <strong>Uwaga:</strong> {cfg.message}
@@ -54,15 +55,9 @@ const { title = "10x Astro Starter", theme } = Astro.props;
         )}
       </Banner>
     ))}
-    <slot />
+    <AppHeader />
+    <div class="flex flex-1 flex-col">
+      <slot />
+    </div>
   </body>
 </html>
-
-<style>
-  html,
-  body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-  }
-</style>

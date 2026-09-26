@@ -15,7 +15,7 @@ const theme = Astro.url.searchParams.get("theme") === "light" ? "light" : "dark"
 
 {isDev && (
   <Layout title="Kitchen sink: auth" theme={theme}>
-    <main class="bg-background text-foreground min-h-screen space-y-8 p-4 sm:p-8">
+    <main class="flex-1 space-y-8 p-4 sm:p-8">
       <header class="flex flex-wrap items-baseline justify-between gap-2">
         <h1 class="text-2xl font-semibold">Auth kitchen sink ({theme})</h1>
         <nav class="text-muted-foreground flex gap-3 text-sm">

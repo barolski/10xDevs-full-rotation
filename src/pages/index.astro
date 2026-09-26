@@ -1,8 +1,94 @@
 ---
-import Welcome from "@/components/Welcome.astro";
+import { ArrowRight, CalendarCheck, CircleCheck, Users } from "lucide-react";
 import Layout from "@/layouts/Layout.astro";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+const { user } = Astro.locals;
+
+// The design system's motif: the hall's 12 slots, 9 taken, the minimum (10) marked.
+const SLOTS = 12;
+const TAKEN = 9;
+const MINIMUM = 10;
+
+const features = [
+  {
+    Icon: CalendarCheck,
+    title: "Sign up from the link",
+    text: "Open the training link from the group chat and take a spot in one tap.",
+  },
+  {
+    Icon: Users,
+    title: "See who's in",
+    text: "The main list holds 12. After that you join the waitlist and move up when someone drops out.",
+  },
+  {
+    Icon: CircleCheck,
+    title: "On or off, decided for you",
+    text: "Sign-ups close 3 hours before. With 10 or more the training is on; with fewer it's called off.",
+  },
+];
 ---
 
-<Layout>
-  <Welcome />
+<Layout title="FullRotation">
+  <main class="flex-1">
+    <section class="mx-auto w-full max-w-3xl px-4 pt-12 pb-10 sm:pt-20">
+      <div class="mb-8 flex items-center gap-1.5" aria-hidden="true">
+        {Array.from({ length: SLOTS }, (_, i) => (
+          <>
+            <span
+              class:list={["h-3 w-6 rounded-sm sm:w-8", i < TAKEN ? "bg-primary" : "border-input border-[1.5px]"]}
+            />
+            {i === MINIMUM - 1 && <span class="bg-foreground h-6 w-0.5 rounded-full" />}
+          </>
+        ))}
+      </div>
+      <h1 class="text-4xl leading-tight font-semibold tracking-tight text-balance sm:text-5xl">
+        Volleyball trainings, one tap to sign up.
+      </h1>
+      <p class="text-muted-foreground mt-4 max-w-xl text-lg">
+        FullRotation keeps the group's weekly sessions in one place: who's in, who's on the waitlist, and whether the
+        hall is on.
+      </p>
+      <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+        {user ? (
+          <a href="/dashboard" class:list={[cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")]}>
+            Go to dashboard
+            <ArrowRight aria-hidden="true" />
+          </a>
+        ) : (
+          <>
+            <a href="/auth/signin" class:list={[cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")]}>
+              Sign in
+            </a>
+            <a
+              href="/auth/signup"
+              class:list={[cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto")]}
+            >
+              Create account
+            </a>
+          </>
+        )}
+      </div>
+    </section>
+
+    <section aria-label="How it works" class="mx-auto grid w-full max-w-3xl gap-4 px-4 pb-16 sm:grid-cols-3">
+      {features.map(({ Icon, title, text }) => (
+        <Card className="gap-3">
+          <CardHeader className="gap-3">
+            <span class="bg-accent text-accent-foreground inline-flex size-9 items-center justify-center rounded-full">
+              <Icon className="size-4" aria-hidden="true" />
+            </span>
+            <CardTitle>
+              <h2>{title}</h2>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p class="text-muted-foreground text-sm leading-relaxed">{text}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </section>
+  </main>
 </Layout>

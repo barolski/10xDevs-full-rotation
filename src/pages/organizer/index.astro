@@ -1,6 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase";
@@ -44,7 +45,7 @@ const sections = [
 ---
 
 <Layout title="Trainings">
-  <main class="bg-background text-foreground min-h-screen p-4 sm:p-8">
+  <main class="flex-1 p-4 sm:p-8">
     <div class="mx-auto w-full max-w-2xl space-y-6">
       <header class="flex flex-wrap items-center justify-between gap-3">
         <h1 class="text-2xl font-semibold">Trainings</h1>
@@ -91,12 +92,7 @@ const sections = [
                             {formatTrainingDateTime(startsAt)} · {training.location}
                           </span>
                         </span>
-                        <span
-                          class:list={[
-                            "shrink-0 rounded-full border px-2 py-0.5 text-xs",
-                            open ? "border-primary text-primary" : "text-muted-foreground",
-                          ]}
-                        >
+                        <span class:list={[badgeVariants({ variant: open ? "success" : "secondary" })]}>
                           {open ? "Sign-ups open" : "Sign-ups closed"}
                         </span>
                       </a>

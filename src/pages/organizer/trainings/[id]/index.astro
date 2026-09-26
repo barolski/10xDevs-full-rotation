@@ -3,6 +3,8 @@ import Layout from "@/layouts/Layout.astro";
 import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
 import CopyLinkButton from "@/components/trainings/CopyLinkButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CircleCheck, Lock } from "lucide-react";
+import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadTraining, unavailableTraining } from "@/lib/training-queries";
@@ -25,7 +27,7 @@ const notice = Astro.url.searchParams.has("created")
 ---
 
 <Layout title={training?.title ?? unavailable.title}>
-  <main class="bg-background text-foreground min-h-screen p-4 sm:p-8">
+  <main class="flex-1 p-4 sm:p-8">
     <div class="mx-auto w-full max-w-md space-y-4">
       <a
         href="/organizer"
@@ -41,7 +43,18 @@ const notice = Astro.url.searchParams.has("created")
             </Alert>
           )}
           <Card>
-            <CardHeader>
+            <CardHeader className="gap-3">
+              {open ? (
+                <span class:list={[badgeVariants({ variant: "success" })]}>
+                  <CircleCheck className="size-3.5" aria-hidden="true" />
+                  Sign-ups open
+                </span>
+              ) : (
+                <span class:list={[badgeVariants({ variant: "secondary" })]}>
+                  <Lock className="size-3.5" aria-hidden="true" />
+                  Sign-ups closed
+                </span>
+              )}
               <CardTitle className="text-2xl">
                 <h1>{training.title}</h1>
               </CardTitle>
