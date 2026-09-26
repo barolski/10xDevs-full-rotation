@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { CalendarClock, MapPin, StickyNote, Type, Save } from "lucide-react";
-import { FormField } from "@/components/auth/FormField";
-import { SubmitButton } from "@/components/auth/SubmitButton";
-import { ServerError } from "@/components/auth/ServerError";
+import { FormField } from "@/components/form/FormField";
+import { SubmitButton } from "@/components/form/SubmitButton";
+import { ServerError } from "@/components/form/ServerError";
 import {
   SIGNUP_CLOSE_HOURS,
   trainingErrorMessage,
@@ -112,6 +112,7 @@ export default function TrainingForm({ action, initial = EMPTY, serverError, sub
         placeholder="e.g. Entrance from the pitch side"
         error={errors.note}
         icon={<StickyNote className="size-4" />}
+        multiline
       />
 
       <ServerError message={serverError} />

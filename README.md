@@ -198,6 +198,7 @@ The change takes effect on the user's next request; no sign-out is needed.
 
 - Any signed-in account can read trainings; `anon` has no access.
 - Only organizers (`public.is_organizer()`) can insert or update them, and only the `title`, `starts_at`, `location` and `note` columns. Nobody can delete them.
+- Any organizer can edit any training, not only their own (PRD FR-005: co-organizers, last write wins). `created_by` is informational.
 - A trigger rejects a training that starts within 3 hours (`training_starts_too_soon`) and any edit once sign-ups have closed, 3 hours before the start (`training_signup_closed`).
 
 **Local only:** to create a training whose sign-ups are already closed (for manual checks), bypass the trigger in a local SQL session. Never do this in production.
@@ -242,6 +243,8 @@ Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or
 `scripts/smoke.mjs` is a dependency-free Node script that walks the whole auth flow (sign-up, sign-in, protected page, sign-out) and the organizer gate (anonymous / player / organizer) over HTTP. Run it against the dev server or the production preview after dependency upgrades.
 
 It needs a **local** Supabase instance: the organizer steps sign in as the seeded `organizer@example.com` (see [Organizer accounts](#organizer-accounts)), which only exists locally and in CI.
+
+The database-boundary steps call Supabase directly, bypassing the app, to check that RLS (not only the middleware) rejects a player. They need `SUPABASE_URL` and `SUPABASE_KEY` in the environment (CI passes them), and print `SKIP` without them.
 
 1. Start local Supabase and apply the seed: `npm run db:start && npm run db:reset`.
 2. Point `.dev.vars` at it: `SUPABASE_URL` = `API_URL` and `SUPABASE_KEY` = `ANON_KEY` from `npx supabase status -o env`.

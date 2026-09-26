@@ -1,9 +1,9 @@
 import { LogIn, Lock, Mail } from "lucide-react";
 import SignInForm from "@/components/auth/SignInForm";
-import { FormField } from "@/components/auth/FormField";
+import { FormField } from "@/components/form/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
-import { ServerError } from "@/components/auth/ServerError";
-import { SubmitButton } from "@/components/auth/SubmitButton";
+import { ServerError } from "@/components/form/ServerError";
+import { SubmitButton } from "@/components/form/SubmitButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
