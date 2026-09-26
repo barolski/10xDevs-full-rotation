@@ -3,13 +3,14 @@ import Layout from "@/layouts/Layout.astro";
 import TrainingForm from "@/components/trainings/TrainingForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadTraining } from "@/lib/training-queries";
+import { loadTraining, unavailableTraining } from "@/lib/training-queries";
 import { utcToZonedLocalInput } from "@/lib/time";
 import { isSignupOpen, trainingErrorMessage } from "@/lib/trainings";
 
-const training = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
+const { training, failed } = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
+const unavailable = unavailableTraining(failed);
 if (!training) {
-  Astro.response.status = 404;
+  Astro.response.status = unavailable.status;
 }
 
 const startsAt = training ? new Date(training.starts_at) : null;
@@ -17,7 +18,7 @@ const open = startsAt ? isSignupOpen(startsAt, new Date()) : false;
 const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
 ---
 
-<Layout title={training ? `Edit: ${training.title}` : "Training not found"}>
+<Layout title={training ? `Edit: ${training.title}` : unavailable.title}>
   <main class="bg-background text-foreground min-h-screen p-4 sm:p-8">
     <div class="mx-auto w-full max-w-md space-y-4">
       <a
@@ -29,12 +30,12 @@ const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            <h1>{training ? "Edit training" : "Training not found"}</h1>
+            <h1>{training ? "Edit training" : unavailable.title}</h1>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {!training || !startsAt ? (
-            <p class="text-muted-foreground text-sm">This training doesn't exist or the link is wrong.</p>
+            <p class="text-muted-foreground text-sm">{unavailable.message}</p>
           ) : open ? (
             <TrainingForm
               action={`/api/organizer/trainings/${training.id}`}

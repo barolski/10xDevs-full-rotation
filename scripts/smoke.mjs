@@ -47,6 +47,37 @@ function storeCookies(response) {
   }
 }
 
+// Direct Supabase access for the database-boundary steps: the app's middleware is not the security
+// boundary, RLS is. Needs the same SUPABASE_URL/SUPABASE_KEY the app uses; without them those steps SKIP.
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+
+async function supabaseToken(userEmail, userPassword) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: userEmail, password: userPassword }),
+  });
+  return (await response.json()).access_token;
+}
+
+// PostgREST call as the given user. `detail` reports how many rows came back (for silent RLS filtering).
+async function rest(path, { method, token, body }) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return { skip: "SUPABASE_URL/SUPABASE_KEY not set" };
+  const response = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
+    method,
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${await token()}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json();
+  return { status: response.status, location: "", detail: Array.isArray(payload) ? `rows=${payload.length}` : "" };
+}
+
 async function request(path, { method = "GET", form } = {}) {
   const response = await fetch(BASE_URL + path, {
     method,
@@ -107,12 +138,22 @@ const steps = [
     () => request("/api/auth/signin", { method: "POST", form: { email, password, next: "//evil.example" } }),
     { status: 302, location: "/" },
   ],
+  [
+    "signin ignores backslash next",
+    () => request("/api/auth/signin", { method: "POST", form: { email, password, next: "/\\evil.example" } }),
+    { status: 302, location: "/" },
+  ],
   ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
   ["signin page redirects signed-in user", () => request("/auth/signin"), { status: 302, location: "/dashboard" }],
   [
     "signin page honours next for signed-in user",
     () => request("/auth/signin?next=/dashboard"),
     { status: 302, location: "/dashboard" },
+  ],
+  [
+    "signin page encodes non-ascii next",
+    () => request(`/auth/signin?next=${encodeURIComponent("/ł")}`),
+    { status: 302, location: "/%C5%82" },
   ],
   ["signup page redirects signed-in user", () => request("/auth/signup"), { status: 302, location: "/dashboard" }],
   ["organizer page forbids player", () => request("/organizer"), { status: 403 }],
@@ -184,6 +225,26 @@ const steps = [
   ],
   ["training page 404s for malformed id", () => request("/t/not-a-uuid"), { status: 404 }],
   [
+    "database rejects player insert (RLS)",
+    () =>
+      rest("/trainings", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { title: "Player", starts_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(), location: "X" },
+      }),
+    { status: 403 },
+  ],
+  [
+    "database ignores player update (RLS)",
+    () =>
+      rest(`/trainings?id=eq.${trainingId}`, {
+        method: "PATCH",
+        token: () => supabaseToken(email, password),
+        body: { location: "Hijacked" },
+      }),
+    { status: 200, detail: "rows=0" },
+  ],
+  [
     "signout clears player session",
     () => request("/api/auth/signout", { method: "POST" }),
     { status: 302, location: "/" },
@@ -201,11 +262,18 @@ function locationMatches(actual, expected) {
 let failed = 0;
 for (const [name, run, expected] of steps) {
   const actual = await run();
-  const ok = actual.status === expected.status && locationMatches(actual.location, expected.location);
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name}  -> ${actual.status} ${actual.location}`);
+  if (actual.skip) {
+    console.log(`SKIP  ${name}  (${actual.skip})`);
+    continue;
+  }
+  const ok =
+    actual.status === expected.status &&
+    locationMatches(actual.location, expected.location) &&
+    (expected.detail === undefined || actual.detail === expected.detail);
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name}  -> ${actual.status} ${actual.location}${actual.detail ?? ""}`);
   if (!ok) {
     failed++;
-    console.log(`      expected ${expected.status} ${expected.location ?? ""}`);
+    console.log(`      expected ${expected.status} ${expected.location ?? ""}${expected.detail ?? ""}`);
   }
 }
 

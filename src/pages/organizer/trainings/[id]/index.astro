@@ -5,13 +5,14 @@ import CopyLinkButton from "@/components/trainings/CopyLinkButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadTraining } from "@/lib/training-queries";
+import { loadTraining, unavailableTraining } from "@/lib/training-queries";
 import { isSignupOpen } from "@/lib/trainings";
 
 const now = new Date();
-const training = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
+const { training, failed } = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
+const unavailable = unavailableTraining(failed);
 if (!training) {
-  Astro.response.status = 404;
+  Astro.response.status = unavailable.status;
 }
 
 const shareUrl = training ? new URL(`/t/${training.id}`, Astro.url.origin).toString() : "";
@@ -23,7 +24,7 @@ const notice = Astro.url.searchParams.has("created")
     : null;
 ---
 
-<Layout title={training?.title ?? "Training not found"}>
+<Layout title={training?.title ?? unavailable.title}>
   <main class="bg-background text-foreground min-h-screen p-4 sm:p-8">
     <div class="mx-auto w-full max-w-md space-y-4">
       <a
@@ -71,11 +72,11 @@ const notice = Astro.url.searchParams.has("created")
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">
-              <h1>Training not found</h1>
+              <h1>{unavailable.title}</h1>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p class="text-muted-foreground text-sm">This training doesn't exist or the link is wrong.</p>
+            <p class="text-muted-foreground text-sm">{unavailable.message}</p>
           </CardContent>
         </Card>
       )}
