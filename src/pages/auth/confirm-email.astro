@@ -1,7 +1,9 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { safeNext, withNext } from "@/lib/redirect";
 
+const next = safeNext(Astro.url.searchParams.get("next"));
 const isAutoConfirmed = import.meta.env.DEV;
 
 const content = isAutoConfirmed
@@ -32,7 +34,10 @@ const content = isAutoConfirmed
         <CardDescription>{content.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <a href="/auth/signin" class="text-foreground hover:decoration-primary text-sm underline underline-offset-4">
+        <a
+          href={withNext("/auth/signin", next)}
+          class="text-foreground hover:decoration-primary text-sm underline underline-offset-4"
+        >
           {content.linkText}
         </a>
       </CardContent>

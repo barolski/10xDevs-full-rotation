@@ -1,7 +1,8 @@
 import { defineMiddleware } from "astro:middleware";
 import { createClient } from "@/lib/supabase";
+import { safeNext, withNext } from "@/lib/redirect";
 
-const PROTECTED_ROUTES = ["/dashboard"];
+const PROTECTED_ROUTES = ["/dashboard", "/t"];
 const ORGANIZER_ROUTES = ["/organizer", "/api/organizer"];
 // Sign-in/up forms make no sense for a signed-in user; send them to the app instead.
 const AUTH_ROUTES = ["/auth/signin", "/auth/signup"];
@@ -34,15 +35,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  const { pathname } = context.url;
+  const { pathname, search } = context.url;
+  // Carry the blocked path through sign-in so the user lands back on it.
+  const signInRedirect = withNext("/auth/signin", safeNext(pathname + search));
 
   if (context.locals.user && AUTH_ROUTES.some((route) => matchesRoute(pathname, route))) {
-    return context.redirect("/dashboard");
+    return context.redirect(safeNext(context.url.searchParams.get("next")) ?? "/dashboard");
   }
 
-  if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
+  if (PROTECTED_ROUTES.some((route) => matchesRoute(pathname, route))) {
     if (!context.locals.user) {
-      return context.redirect("/auth/signin");
+      return context.redirect(signInRedirect);
     }
   }
 
@@ -50,7 +53,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const isApi = matchesRoute(pathname, "/api/organizer");
 
     if (!context.locals.user) {
-      return isApi ? Response.json({ error: "unauthorized" }, { status: 401 }) : context.redirect("/auth/signin");
+      return isApi ? Response.json({ error: "unauthorized" }, { status: 401 }) : context.redirect(signInRedirect);
     }
     if (!context.locals.isOrganizer) {
       // Rewrite (not redirect) so the response carries the 403 status set by the page.

@@ -3,6 +3,7 @@
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4321";
 const email = `smoke-${Date.now()}@example.com`;
+const nextEmail = `smoke-next-${Date.now()}@example.com`;
 const password = "Smoke-Test-Passw0rd!";
 // Defaults match the local/CI-only organizer created by supabase/seed.sql.
 const organizerEmail = process.env.SMOKE_ORGANIZER_EMAIL ?? "organizer@example.com";
@@ -40,14 +41,28 @@ async function request(path, { method = "GET", form } = {}) {
 
 const steps = [
   ["home renders", () => request("/"), { status: 200 }],
-  ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
-  ["organizer page redirects anonymous user", () => request("/organizer"), { status: 302, location: "/auth/signin" }],
+  ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin?next=" }],
+  [
+    "organizer page redirects anonymous user",
+    () => request("/organizer"),
+    { status: 302, location: "/auth/signin?next=" },
+  ],
+  [
+    "training page redirects anonymous user",
+    () => request("/t/00000000-0000-4000-8000-000000000999"),
+    { status: 302, location: "/auth/signin?next=%2Ft%2F" },
+  ],
   ["organizer api rejects anonymous user", () => request("/api/organizer/me"), { status: 401 }],
   ["signin page renders for anonymous user", () => request("/auth/signin"), { status: 200 }],
   [
     "signup creates account",
     () => request("/api/auth/signup", { method: "POST", form: { email, password } }),
     { status: 302, location: "/auth/confirm-email" },
+  ],
+  [
+    "signup keeps next",
+    () => request("/api/auth/signup", { method: "POST", form: { email: nextEmail, password, next: "/dashboard" } }),
+    { status: 302, location: "/auth/confirm-email?next=" },
   ],
   [
     "signin rejects wrong password",
@@ -59,13 +74,28 @@ const steps = [
     () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
     { status: 302, location: "/" },
   ],
+  [
+    "signin returns to next",
+    () => request("/api/auth/signin", { method: "POST", form: { email, password, next: "/dashboard" } }),
+    { status: 302, location: "/dashboard" },
+  ],
+  [
+    "signin ignores external next",
+    () => request("/api/auth/signin", { method: "POST", form: { email, password, next: "//evil.example" } }),
+    { status: 302, location: "/" },
+  ],
   ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
   ["signin page redirects signed-in user", () => request("/auth/signin"), { status: 302, location: "/dashboard" }],
+  [
+    "signin page honours next for signed-in user",
+    () => request("/auth/signin?next=/dashboard"),
+    { status: 302, location: "/dashboard" },
+  ],
   ["signup page redirects signed-in user", () => request("/auth/signup"), { status: 302, location: "/dashboard" }],
   ["organizer page forbids player", () => request("/organizer"), { status: 403 }],
   ["organizer api forbids player", () => request("/api/organizer/me"), { status: 403 }],
   ["signout clears session", () => request("/api/auth/signout", { method: "POST" }), { status: 302, location: "/" }],
-  ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
+  ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin?next=" }],
   [
     "signin accepts seeded organizer",
     () => request("/api/auth/signin", { method: "POST", form: { email: organizerEmail, password: organizerPassword } }),

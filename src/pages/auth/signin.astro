@@ -2,8 +2,10 @@
 import Layout from "@/layouts/Layout.astro";
 import SignInForm from "@/components/auth/SignInForm";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { safeNext, withNext } from "@/lib/redirect";
 
 const error = Astro.url.searchParams.get("error");
+const next = safeNext(Astro.url.searchParams.get("next"));
 ---
 
 <Layout title="Sign in">
@@ -15,12 +17,15 @@ const error = Astro.url.searchParams.get("error");
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <SignInForm serverError={error} client:load />
+        <SignInForm serverError={error} next={next} client:load />
       </CardContent>
       <CardFooter className="justify-center">
         <p class="text-muted-foreground text-sm">
           Don't have an account?{" "}
-          <a href="/auth/signup" class="text-foreground hover:decoration-primary underline underline-offset-4">
+          <a
+            href={withNext("/auth/signup", next)}
+            class="text-foreground hover:decoration-primary underline underline-offset-4"
+          >
             Sign up
           </a>
         </p>
