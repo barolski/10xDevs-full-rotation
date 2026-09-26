@@ -1,0 +1,68 @@
+---
+// The player's view of one training (/t/[id]); also rendered by /dev/training-kitchen-sink so the gate
+// shows the same markup the page ships.
+import { CircleCheck, Lock } from "lucide-react";
+import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
+import { badgeVariants } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { isSignupOpen, type Training } from "@/lib/trainings";
+
+interface Props {
+  training: Training | null;
+  unavailable: { title: string; message: string };
+  now: Date;
+  isOrganizer?: boolean;
+}
+
+const { training, unavailable, now, isOrganizer = false } = Astro.props;
+const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
+---
+
+<Card className="w-full">
+  {training ? (
+    <>
+      <CardHeader className="gap-3">
+        {open ? (
+          <span class:list={[badgeVariants({ variant: "success" })]}>
+            <CircleCheck className="size-3.5" aria-hidden="true" />
+            Sign-ups open
+          </span>
+        ) : (
+          <span class:list={[badgeVariants({ variant: "secondary" })]}>
+            <Lock className="size-3.5" aria-hidden="true" />
+            Sign-ups closed
+          </span>
+        )}
+        <CardTitle className="text-2xl leading-tight font-semibold tracking-tight text-balance break-words">
+          <h1>{training.title}</h1>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <TrainingDetails training={training} now={now} />
+        {/* S-02 (player-signup-and-withdraw) replaces this block with sign-up / withdraw and the rosters. */}
+        <p class="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
+          Sign-up opens here soon.
+        </p>
+      </CardContent>
+      {isOrganizer && (
+        <CardFooter className="border-t">
+          <a href={`/organizer/trainings/${training.id}`} class:list={[buttonVariants({ variant: "outline" })]}>
+            Manage
+          </a>
+        </CardFooter>
+      )}
+    </>
+  ) : (
+    <>
+      <CardHeader>
+        <CardTitle className="text-2xl leading-tight font-semibold tracking-tight">
+          <h1>{unavailable.title}</h1>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p class="text-muted-foreground text-sm">{unavailable.message}</p>
+      </CardContent>
+    </>
+  )}
+</Card>
