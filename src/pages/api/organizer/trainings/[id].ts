@@ -25,10 +25,7 @@ export const POST: APIRoute = async (context) => {
     .select("id")
     .overrideTypes<{ id: string }[], { merge: false }>();
 
-  if (error) {
-    console.error("[trainings] update failed:", error.message);
-    return fail(mapTrainingDbError(error));
-  }
+  if (error) return fail(mapTrainingDbError(error));
   if (data.length === 0) return context.redirect("/organizer?error=not_found");
 
   return context.redirect(`/organizer/trainings/${id}?updated=1`);

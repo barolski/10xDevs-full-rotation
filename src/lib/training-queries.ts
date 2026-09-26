@@ -13,13 +13,12 @@ export async function loadTraining(
   const supabase = createClient(headers, cookies);
   if (!supabase) return null;
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("trainings")
     .select(TRAINING_COLUMNS)
     .eq("id", id)
     .maybeSingle()
     .overrideTypes<Training, { merge: false }>();
 
-  if (error) console.error("[trainings] load failed:", error.message);
   return data ?? null;
 }

@@ -21,10 +21,7 @@ export const POST: APIRoute = async (context) => {
     .single()
     .overrideTypes<{ id: string }, { merge: false }>();
 
-  if (error) {
-    console.error("[trainings] create failed:", error.message);
-    return fail(mapTrainingDbError(error));
-  }
+  if (error) return fail(mapTrainingDbError(error));
 
   return context.redirect(`/organizer/trainings/${data.id}?created=1`);
 };
