@@ -19,6 +19,10 @@ const ORGANIZER_ID = "00000000-0000-4000-8000-000000000001";
 let trainingId = "";
 // Set by the profile-update step, read by the rating steps after it.
 let playerId = "";
+// Set by the sign-up steps, read by the steps that act on those rows.
+let signupId = "";
+let organizerSignupId = "";
+let parallelTrainingId = "";
 
 // Training start as the form sends it: Polish wall-clock time ("YYYY-MM-DDTHH:mm") `hours` from now.
 function warsawLocal(hours) {
@@ -86,7 +90,13 @@ async function rest(path, { method, token, body }) {
     body: JSON.stringify(body),
   });
   const payload = await response.json();
-  return { status: response.status, location: "", detail: Array.isArray(payload) ? `rows=${payload.length}` : "" };
+  // `payload` is not compared by the runner; steps read it to carry an inserted row's id forward.
+  return {
+    status: response.status,
+    location: "",
+    detail: Array.isArray(payload) ? `rows=${payload.length}` : "",
+    payload,
+  };
 }
 
 async function request(path, { method = "GET", form } = {}) {
@@ -310,6 +320,138 @@ const steps = [
         method: "POST",
         token: () => supabaseToken(organizerEmail, organizerPassword),
         body: { user_id: playerId, rating: 7.5 },
+      }),
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "database accepts player signup",
+    async () => {
+      const result = await rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId },
+      });
+      signupId = result.payload?.[0]?.id ?? "";
+      return result;
+    },
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "database rejects signup with a forged position",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId, position: 1 },
+      }),
+    { status: 403 },
+  ],
+  [
+    "database rejects signup naming another user",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId, user_id: ORGANIZER_ID },
+      }),
+    { status: 403 },
+  ],
+  [
+    "database rejects a duplicate active signup",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId },
+      }),
+    { status: 409 },
+  ],
+  [
+    "organizer creates a parallel training 1 h later",
+    async () => {
+      const result = await rest("/trainings", {
+        method: "POST",
+        token: () => supabaseToken(organizerEmail, organizerPassword),
+        body: {
+          title: "Smoke parallel training",
+          starts_at: new Date(Date.now() + 49 * 3600 * 1000).toISOString(),
+          location: "Smoke hall C",
+        },
+      });
+      parallelTrainingId = result.payload?.[0]?.id ?? "";
+      return result;
+    },
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "database rejects a signup overlapping within 120 minutes",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: parallelTrainingId },
+      }),
+    { status: 400 },
+  ],
+  [
+    "database rejects changing a signup position",
+    () =>
+      rest(`/signups?id=eq.${signupId}`, {
+        method: "PATCH",
+        token: () => supabaseToken(email, password),
+        body: { position: 1 },
+      }),
+    { status: 403 },
+  ],
+  [
+    "organizer signs up for the same training",
+    async () => {
+      const result = await rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(organizerEmail, organizerPassword),
+        body: { training_id: trainingId },
+      });
+      organizerSignupId = result.payload?.[0]?.id ?? "";
+      return result;
+    },
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "database ignores withdrawing another user's signup (RLS)",
+    () =>
+      rest(`/signups?id=eq.${organizerSignupId}`, {
+        method: "PATCH",
+        token: () => supabaseToken(email, password),
+        body: { status: "withdrawn" },
+      }),
+    { status: 200, detail: "rows=0" },
+  ],
+  [
+    "database rejects deleting a signup",
+    () =>
+      rest(`/signups?id=eq.${signupId}`, {
+        method: "DELETE",
+        token: () => supabaseToken(email, password),
+      }),
+    { status: 403 },
+  ],
+  [
+    "database accepts withdrawing own signup",
+    () =>
+      rest(`/signups?id=eq.${signupId}`, {
+        method: "PATCH",
+        token: () => supabaseToken(email, password),
+        body: { status: "withdrawn" },
+      }),
+    { status: 200, detail: "rows=1" },
+  ],
+  [
+    "database accepts signing up again after withdrawal",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId },
       }),
     { status: 201, detail: "rows=1" },
   ],
