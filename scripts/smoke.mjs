@@ -1,6 +1,8 @@
 // Smoke test: proves the built app, the Cloudflare adapter and the Supabase auth flow still work together.
 // Zero dependencies on purpose. Run against a live server: BASE_URL=http://localhost:4321 node scripts/smoke.mjs
 
+import { Buffer } from "node:buffer";
+
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4321";
 const email = `smoke-${Date.now()}@example.com`;
 const nextEmail = `smoke-next-${Date.now()}@example.com`;
@@ -11,8 +13,12 @@ const organizerPassword = process.env.SMOKE_ORGANIZER_PASSWORD ?? "Organizer-Pas
 const jar = new Map();
 const CREATED_LOCATION = /^\/organizer\/trainings\/([0-9a-f-]{36})\?created=1$/;
 const UPDATED_LOCATION = /^\/organizer\/trainings\/[0-9a-f-]{36}\?updated=1$/;
+// The local/CI-only organizer from supabase/seed.sql; used as "somebody else's row" in the RLS steps.
+const ORGANIZER_ID = "00000000-0000-4000-8000-000000000001";
 // Set by the organizer's create step, read by the later player/organizer steps.
 let trainingId = "";
+// Set by the profile-update step, read by the rating steps after it.
+let playerId = "";
 
 // Training start as the form sends it: Polish wall-clock time ("YYYY-MM-DDTHH:mm") `hours` from now.
 function warsawLocal(hours) {
@@ -59,6 +65,11 @@ async function supabaseToken(userEmail, userPassword) {
     body: JSON.stringify({ email: userEmail, password: userPassword }),
   });
   return (await response.json()).access_token;
+}
+
+// A user's own uuid, read from the `sub` claim of the JWT the token endpoint returns.
+function jwtSubject(jwt) {
+  return JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString("utf8")).sub;
 }
 
 // PostgREST call as the given user. `detail` reports how many rows came back (for silent RLS filtering).
@@ -243,6 +254,64 @@ const steps = [
         body: { location: "Hijacked" },
       }),
     { status: 200, detail: "rows=0" },
+  ],
+  [
+    "database ignores profile update for another user (RLS)",
+    () =>
+      rest(`/profiles?user_id=eq.${ORGANIZER_ID}`, {
+        method: "PATCH",
+        token: () => supabaseToken(email, password),
+        body: { nickname: "hijacked" },
+      }),
+    { status: 200, detail: "rows=0" },
+  ],
+  [
+    "database allows own profile update",
+    async () => {
+      const jwt = await supabaseToken(email, password);
+      playerId = jwtSubject(jwt);
+      return rest(`/profiles?user_id=eq.${playerId}`, {
+        method: "PATCH",
+        token: () => jwt,
+        body: { nickname: "smoke-player" },
+      });
+    },
+    { status: 200, detail: "rows=1" },
+  ],
+  [
+    "database rejects profile insert (no grant)",
+    () =>
+      rest("/profiles", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { user_id: ORGANIZER_ID, nickname: "forged" },
+      }),
+    { status: 403 },
+  ],
+  [
+    "database hides ratings from player (RLS)",
+    () => rest("/player_ratings", { method: "GET", token: () => supabaseToken(email, password) }),
+    { status: 200, detail: "rows=0" },
+  ],
+  [
+    "database rejects rating insert by player (RLS)",
+    () =>
+      rest("/player_ratings", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { user_id: playerId, rating: 5 },
+      }),
+    { status: 403 },
+  ],
+  [
+    "database allows rating insert by organizer",
+    () =>
+      rest("/player_ratings", {
+        method: "POST",
+        token: () => supabaseToken(organizerEmail, organizerPassword),
+        body: { user_id: playerId, rating: 7.5 },
+      }),
+    { status: 201, detail: "rows=1" },
   ],
   [
     "signout clears player session",

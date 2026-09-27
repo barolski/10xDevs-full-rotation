@@ -209,6 +209,16 @@ insert into public.trainings (title, starts_at, location) values ('Closed traini
 set session_replication_role = default;
 ```
 
+### Player profiles
+
+`public.profiles` holds one row per account, created automatically by a trigger on `auth.users` (existing accounts were backfilled by the same migration). `auth.users` is not readable by client roles, so this table is what lets a roster name people.
+
+- `nickname` is the name rosters show. It starts as the e-mail local part (`jan.kowalski91@example.com` → `jan.kowalski91`) and the player edits it on `/profile`.
+- `first_name`, `last_name`, `primary_position` and `secondary_position` exist but are unused for now — they are filled by the player-positions-and-ratings slice.
+- Every signed-in account can read every profile (the main list and waitlist name everyone on them); only the owner can update their own row. Clients have no insert or delete path at all.
+- `public.player_ratings` holds the organizer-set rating (`numeric(3,1)`, 1.0–10.0). It is a separate table because column grants apply to the whole `authenticated` role: a player cannot read any rating, including their own, even by calling the database directly. `updated_by` and `updated_at` are set by a trigger, not by the client.
+- `public.is_blocked(user, training)` is the hook for the no-show lockout. It returns `false` for everyone until the attendance slice fills it in; the sign-up path already calls it.
+
 ### Auth routes
 
 | Route                 | Description                                                             |
