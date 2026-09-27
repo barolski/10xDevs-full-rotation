@@ -209,6 +209,28 @@ insert into public.trainings (title, starts_at, location) values ('Closed traini
 set session_replication_role = default;
 ```
 
+### Player sign-ups
+
+`public.signups` holds one row per sign-up attempt on a training, reached from the shared `/t/<id>` link.
+
+- The main list holds **12** players; everyone after them is on the waitlist. Placement is **derived**, not stored: the main list is the first 12 *active* sign-ups by `position`, so a withdrawal before sign-ups close pulls the next player up with no extra write. `MAIN_LIST_SIZE` in `src/lib/signups.ts` is mirrored by a comment in the migration.
+- `position` is the queue number the database hands out in sign-up order, under a per-training advisory lock. Two players racing for the last slot are serialized; a unique index on `(training_id, position)` is the backstop.
+- A player may hold **one active sign-up per training** (partial unique index) and **no two active sign-ups for trainings starting less than 120 minutes apart** (`overlapping_signup`). The waitlist counts, because a waitlisted player can be promoted.
+- Signing up after the window closed is rejected (`signup_closed`). Withdrawing is **allowed by the database at any time** — a late withdrawal counts as an absence and a post-confirmation one promotes a waitlisted player, both owned by later slices — but the app only offers the button while sign-ups are open.
+- A withdrawal never deletes the row: it flips `status` to `withdrawn` and stamps `withdrawn_at`. Signing up again inserts a new row with a fresh tail position, so nobody jumps the queue.
+- Players read every **active** sign-up (both rosters, by name) but not anyone else's withdrawn rows; organizers read everything. Clients may name only `training_id` on insert and only `status` on update, so `position`, `user_id` and `withdrawn_at` cannot be forged.
+- Dev-only visual gates: `/dev/training-kitchen-sink` and `/dev/profile-kitchen-sink` render every state of these views (both themes via `?theme=`). They 404 in a production build.
+
+### Player profiles
+
+`public.profiles` holds one row per account, created automatically by a trigger on `auth.users` (existing accounts were backfilled by the same migration). `auth.users` is not readable by client roles, so this table is what lets a roster name people.
+
+- `nickname` is the name rosters show. It starts as the e-mail local part (`jan.kowalski91@example.com` → `jan.kowalski91`) and the player edits it on `/profile`.
+- `first_name`, `last_name`, `primary_position` and `secondary_position` exist but are unused for now — they are filled by the player-positions-and-ratings slice.
+- Every signed-in account can read every profile (the main list and waitlist name everyone on them); only the owner can update their own row. Clients have no insert or delete path at all.
+- `public.player_ratings` holds the organizer-set rating (`numeric(3,1)`, 1.0–10.0). It is a separate table because column grants apply to the whole `authenticated` role: a player cannot read any rating, including their own, even by calling the database directly. `updated_by` and `updated_at` are set by a trigger, not by the client.
+- `public.is_blocked(user, training)` is the hook for the no-show lockout. It returns `false` for everyone until the attendance slice fills it in; the sign-up path already calls it.
+
 ### Auth routes
 
 | Route                 | Description                                                             |

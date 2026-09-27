@@ -2,7 +2,7 @@ import { defineMiddleware } from "astro:middleware";
 import { createClient } from "@/lib/supabase";
 import { safeNext, withNext } from "@/lib/redirect";
 
-const PROTECTED_ROUTES = ["/dashboard", "/t"];
+const PROTECTED_ROUTES = ["/dashboard", "/t", "/profile", "/api/profile", "/api/trainings"];
 const ORGANIZER_ROUTES = ["/organizer", "/api/organizer"];
 // Sign-in/up forms make no sense for a signed-in user; send them to the app instead.
 const AUTH_ROUTES = ["/auth/signin", "/auth/signup"];
@@ -43,17 +43,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect(safeNext(context.url.searchParams.get("next")) ?? "/dashboard");
   }
 
+  // An API route answers as an API: a missing session is a 401, not a redirect to an HTML page.
+  const isApi = matchesRoute(pathname, "/api");
+  const unauthenticated = () =>
+    isApi ? Response.json({ error: "unauthorized" }, { status: 401 }) : context.redirect(signInRedirect);
+
   if (PROTECTED_ROUTES.some((route) => matchesRoute(pathname, route))) {
     if (!context.locals.user) {
-      return context.redirect(signInRedirect);
+      return unauthenticated();
     }
   }
 
   if (ORGANIZER_ROUTES.some((route) => matchesRoute(pathname, route))) {
-    const isApi = matchesRoute(pathname, "/api/organizer");
-
     if (!context.locals.user) {
-      return isApi ? Response.json({ error: "unauthorized" }, { status: 401 }) : context.redirect(signInRedirect);
+      return unauthenticated();
     }
     if (!context.locals.isOrganizer) {
       // Rewrite (not redirect) so the response carries the 403 status set by the page.

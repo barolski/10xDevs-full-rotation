@@ -1,0 +1,51 @@
+---
+// The player's own profile. Only the name rosters show is editable here; positions and the
+// organizer-set rating belong to the positions-and-ratings slice.
+import { CircleCheck } from "lucide-react";
+import Layout from "@/layouts/Layout.astro";
+import ProfileForm from "@/components/profile/ProfileForm";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { loadProfile, unavailableProfile } from "@/lib/signup-queries";
+import { profileErrorMessage } from "@/lib/profiles";
+
+const { user } = Astro.locals;
+// Middleware guarantees a session on /profile; loadProfile guards the id if that ever changes.
+const { profile, failed } = await loadProfile(user?.id, Astro.request.headers, Astro.cookies);
+const unavailable = unavailableProfile(failed);
+if (!profile) {
+  Astro.response.status = unavailable.status;
+}
+
+const params = Astro.url.searchParams;
+const saved = params.has("saved");
+const error = profileErrorMessage(params.get("error"));
+---
+
+<Layout title="Your profile">
+  <main class="mx-auto w-full max-w-md flex-1 p-4 sm:pt-8">
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl">
+          <h1>Your profile</h1>
+        </CardTitle>
+        <CardDescription>
+          Signed in as <span class="text-foreground font-medium break-all">{user?.email}</span>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {saved && !error && (
+          <Alert>
+            <CircleCheck />
+            <AlertDescription>Profile saved.</AlertDescription>
+          </Alert>
+        )}
+        {profile ? (
+          <ProfileForm initialNickname={profile.nickname} serverError={error} client:load />
+        ) : (
+          <p class="text-muted-foreground text-sm">{unavailable.message}</p>
+        )}
+      </CardContent>
+    </Card>
+  </main>
+</Layout>

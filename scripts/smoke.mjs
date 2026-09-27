@@ -1,9 +1,14 @@
 // Smoke test: proves the built app, the Cloudflare adapter and the Supabase auth flow still work together.
 // Zero dependencies on purpose. Run against a live server: BASE_URL=http://localhost:4321 node scripts/smoke.mjs
 
+import { Buffer } from "node:buffer";
+
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4321";
 const email = `smoke-${Date.now()}@example.com`;
 const nextEmail = `smoke-next-${Date.now()}@example.com`;
+// Two more players, so the queue-number steps have actors who cannot see each other's withdrawn rows.
+const secondEmail = `smoke-second-${Date.now()}@example.com`;
+const thirdEmail = `smoke-third-${Date.now()}@example.com`;
 const password = "Smoke-Test-Passw0rd!";
 // Defaults match the local/CI-only organizer created by supabase/seed.sql.
 const organizerEmail = process.env.SMOKE_ORGANIZER_EMAIL ?? "organizer@example.com";
@@ -11,8 +16,21 @@ const organizerPassword = process.env.SMOKE_ORGANIZER_PASSWORD ?? "Organizer-Pas
 const jar = new Map();
 const CREATED_LOCATION = /^\/organizer\/trainings\/([0-9a-f-]{36})\?created=1$/;
 const UPDATED_LOCATION = /^\/organizer\/trainings\/[0-9a-f-]{36}\?updated=1$/;
+// Training ids are generated during the run, so a player-page location has to be matched as a pattern.
+const trainingLocation = (query) => new RegExp(`^/t/[0-9a-f-]{36}\\?${query}$`);
+// The local/CI-only organizer from supabase/seed.sql; used as "somebody else's row" in the RLS steps.
+const ORGANIZER_ID = "00000000-0000-4000-8000-000000000001";
 // Set by the organizer's create step, read by the later player/organizer steps.
 let trainingId = "";
+// Set by the profile-update step, read by the rating steps after it.
+let playerId = "";
+// Set by the sign-up steps, read by the steps that act on those rows.
+let signupId = "";
+let organizerSignupId = "";
+let parallelTrainingId = "";
+// The queue-number sequence below runs on its own training, far from the others in time.
+let queueTrainingId = "";
+let queueSignupId = "";
 
 // Training start as the form sends it: Polish wall-clock time ("YYYY-MM-DDTHH:mm") `hours` from now.
 function warsawLocal(hours) {
@@ -61,6 +79,23 @@ async function supabaseToken(userEmail, userPassword) {
   return (await response.json()).access_token;
 }
 
+// A user's own uuid, read from the `sub` claim of the JWT the token endpoint returns.
+function jwtSubject(jwt) {
+  return JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString("utf8")).sub;
+}
+
+// Signs the given user up and reports the queue number the database handed out, not just that the
+// insert succeeded: the number is the thing that breaks when the position read cannot see every row.
+async function signUpForPosition(userEmail, trainingId) {
+  const result = await rest("/signups", {
+    method: "POST",
+    token: () => supabaseToken(userEmail, password),
+    body: { training_id: trainingId },
+  });
+  const position = result.payload?.[0]?.position;
+  return { ...result, detail: position === undefined ? result.detail : `position=${position}` };
+}
+
 // PostgREST call as the given user. `detail` reports how many rows came back (for silent RLS filtering).
 async function rest(path, { method, token, body }) {
   if (!SUPABASE_URL || !SUPABASE_KEY) return { skip: "SUPABASE_URL/SUPABASE_KEY not set" };
@@ -75,7 +110,13 @@ async function rest(path, { method, token, body }) {
     body: JSON.stringify(body),
   });
   const payload = await response.json();
-  return { status: response.status, location: "", detail: Array.isArray(payload) ? `rows=${payload.length}` : "" };
+  // `payload` is not compared by the runner; steps read it to carry an inserted row's id forward.
+  return {
+    status: response.status,
+    location: "",
+    detail: Array.isArray(payload) ? `rows=${payload.length}` : "",
+    payload,
+  };
 }
 
 async function request(path, { method = "GET", form } = {}) {
@@ -107,6 +148,13 @@ const steps = [
     { status: 302, location: "/auth/signin?next=%2Ft%2F" },
   ],
   ["organizer api rejects anonymous user", () => request("/api/organizer/me"), { status: 401 }],
+  [
+    "signup api rejects anonymous user",
+    () => request("/api/trainings/00000000-0000-4000-8000-000000000999/signup", { method: "POST" }),
+    { status: 401 },
+  ],
+  ["profile page redirects anonymous user", () => request("/profile"), { status: 302, location: "/auth/signin?next=" }],
+  ["profile api rejects anonymous user", () => request("/api/profile", { method: "POST" }), { status: 401 }],
   ["signin page renders for anonymous user", () => request("/auth/signin"), { status: 200 }],
   [
     "signup creates account",
@@ -224,6 +272,69 @@ const steps = [
     { status: 403 },
   ],
   ["training page 404s for malformed id", () => request("/t/not-a-uuid"), { status: 404 }],
+  // App-level sign-up flow. It ends with the player withdrawn, so the database-boundary steps below
+  // start from a clean slate on the same training.
+  [
+    "player signs up for a training",
+    () => request(`/api/trainings/${trainingId}/signup`, { method: "POST" }),
+    { status: 302, location: trainingLocation("signed_up=1") },
+  ],
+  [
+    "signup rejects a duplicate",
+    () => request(`/api/trainings/${trainingId}/signup`, { method: "POST" }),
+    { status: 302, location: trainingLocation("error=already_signed_up") },
+  ],
+  // Renders the roster while the player is on it: the only step that exercises loadRoster's
+  // profiles!inner(nickname) embed and the placement/withdraw branch of the panel.
+  ["training page renders for a signed-up player", () => request(`/t/${trainingId}`), { status: 200 }],
+  [
+    "organizer creates a parallel training 1 h later",
+    async () => {
+      const result = await rest("/trainings", {
+        method: "POST",
+        token: () => supabaseToken(organizerEmail, organizerPassword),
+        body: {
+          title: "Smoke parallel training",
+          starts_at: new Date(Date.now() + 49 * 3600 * 1000).toISOString(),
+          location: "Smoke hall C",
+        },
+      });
+      parallelTrainingId = result.payload?.[0]?.id ?? "";
+      return result;
+    },
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "signup rejects an overlapping training",
+    () => request(`/api/trainings/${parallelTrainingId}/signup`, { method: "POST" }),
+    { status: 302, location: trainingLocation("error=overlapping_signup") },
+  ],
+  [
+    "signup rejects a malformed training id",
+    () => request("/api/trainings/not-a-uuid/signup", { method: "POST" }),
+    { status: 302, location: "/dashboard?error=not_found" },
+  ],
+  [
+    "player withdraws from a training",
+    () => request(`/api/trainings/${trainingId}/withdraw`, { method: "POST" }),
+    { status: 302, location: trainingLocation("withdrawn=1") },
+  ],
+  [
+    "withdraw rejects a player who is not signed up",
+    () => request(`/api/trainings/${trainingId}/withdraw`, { method: "POST" }),
+    { status: 302, location: trainingLocation("error=not_signed_up") },
+  ],
+  ["profile page renders for player", () => request("/profile"), { status: 200 }],
+  [
+    "profile rejects a name over the limit",
+    () => request("/api/profile", { method: "POST", form: { nickname: "x".repeat(41) } }),
+    { status: 302, location: "/profile?error=nickname_too_long" },
+  ],
+  [
+    "profile saves a valid name",
+    () => request("/api/profile", { method: "POST", form: { nickname: "Smoke Player" } }),
+    { status: 302, location: "/profile?saved=1" },
+  ],
   [
     "database rejects player insert (RLS)",
     () =>
@@ -243,6 +354,251 @@ const steps = [
         body: { location: "Hijacked" },
       }),
     { status: 200, detail: "rows=0" },
+  ],
+  [
+    "database ignores profile update for another user (RLS)",
+    () =>
+      rest(`/profiles?user_id=eq.${ORGANIZER_ID}`, {
+        method: "PATCH",
+        token: () => supabaseToken(email, password),
+        body: { nickname: "hijacked" },
+      }),
+    { status: 200, detail: "rows=0" },
+  ],
+  [
+    "database allows own profile update",
+    async () => {
+      const jwt = await supabaseToken(email, password);
+      playerId = jwtSubject(jwt);
+      return rest(`/profiles?user_id=eq.${playerId}`, {
+        method: "PATCH",
+        token: () => jwt,
+        body: { nickname: "smoke-player" },
+      });
+    },
+    { status: 200, detail: "rows=1" },
+  ],
+  [
+    "database rejects profile insert (no grant)",
+    () =>
+      rest("/profiles", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { user_id: ORGANIZER_ID, nickname: "forged" },
+      }),
+    { status: 403 },
+  ],
+  [
+    "database hides ratings from player (RLS)",
+    () => rest("/player_ratings", { method: "GET", token: () => supabaseToken(email, password) }),
+    { status: 200, detail: "rows=0" },
+  ],
+  [
+    "database rejects rating insert by player (RLS)",
+    () =>
+      rest("/player_ratings", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { user_id: playerId, rating: 5 },
+      }),
+    { status: 403 },
+  ],
+  [
+    "database allows rating insert by organizer",
+    () =>
+      rest("/player_ratings", {
+        method: "POST",
+        token: () => supabaseToken(organizerEmail, organizerPassword),
+        body: { user_id: playerId, rating: 7.5 },
+      }),
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "database accepts player signup",
+    async () => {
+      const result = await rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId },
+      });
+      signupId = result.payload?.[0]?.id ?? "";
+      return result;
+    },
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "database rejects signup with a forged position",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId, position: 1 },
+      }),
+    { status: 403 },
+  ],
+  [
+    "database rejects signup naming another user",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId, user_id: ORGANIZER_ID },
+      }),
+    { status: 403 },
+  ],
+  [
+    "database rejects a duplicate active signup",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId },
+      }),
+    { status: 409 },
+  ],
+  [
+    "database rejects a signup overlapping within 120 minutes",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: parallelTrainingId },
+      }),
+    { status: 400 },
+  ],
+  [
+    "database rejects changing a signup position",
+    () =>
+      rest(`/signups?id=eq.${signupId}`, {
+        method: "PATCH",
+        token: () => supabaseToken(email, password),
+        body: { position: 1 },
+      }),
+    { status: 403 },
+  ],
+  [
+    "organizer signs up for the same training",
+    async () => {
+      const result = await rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(organizerEmail, organizerPassword),
+        body: { training_id: trainingId },
+      });
+      organizerSignupId = result.payload?.[0]?.id ?? "";
+      return result;
+    },
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "database ignores withdrawing another user's signup (RLS)",
+    () =>
+      rest(`/signups?id=eq.${organizerSignupId}`, {
+        method: "PATCH",
+        token: () => supabaseToken(email, password),
+        body: { status: "withdrawn" },
+      }),
+    { status: 200, detail: "rows=0" },
+  ],
+  // The organizer account is reused across runs, unlike the per-run player accounts. Leaving this
+  // sign-up active would make the next run's organizer sign-up collide with the 120-minute rule.
+  [
+    "organizer withdraws again, keeping repeat runs clean",
+    () =>
+      rest(`/signups?id=eq.${organizerSignupId}`, {
+        method: "PATCH",
+        token: () => supabaseToken(organizerEmail, organizerPassword),
+        body: { status: "withdrawn" },
+      }),
+    { status: 200, detail: "rows=1" },
+  ],
+  [
+    "database rejects deleting a signup",
+    () =>
+      rest(`/signups?id=eq.${signupId}`, {
+        method: "DELETE",
+        token: () => supabaseToken(email, password),
+      }),
+    { status: 403 },
+  ],
+  [
+    "database accepts withdrawing own signup",
+    () =>
+      rest(`/signups?id=eq.${signupId}`, {
+        method: "PATCH",
+        token: () => supabaseToken(email, password),
+        body: { status: "withdrawn" },
+      }),
+    { status: 200, detail: "rows=1" },
+  ],
+  // Queue numbers across three players. A withdrawn row is invisible to everyone but its owner and
+  // organizers, so the position read must still count it — otherwise the next player collides with
+  // signups_training_position_idx and sign-ups stay broken for that training.
+  [
+    "signup creates a second player",
+    () => request("/api/auth/signup", { method: "POST", form: { email: secondEmail, password } }),
+    { status: 302, location: "/auth/confirm-email" },
+  ],
+  [
+    "signup creates a third player",
+    () => request("/api/auth/signup", { method: "POST", form: { email: thirdEmail, password } }),
+    { status: 302, location: "/auth/confirm-email" },
+  ],
+  [
+    "organizer creates a training for the queue checks",
+    async () => {
+      const result = await rest("/trainings", {
+        method: "POST",
+        token: () => supabaseToken(organizerEmail, organizerPassword),
+        body: {
+          title: "Smoke queue training",
+          starts_at: new Date(Date.now() + 72 * 3600 * 1000).toISOString(),
+          location: "Smoke hall D",
+        },
+      });
+      queueTrainingId = result.payload?.[0]?.id ?? "";
+      return result;
+    },
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "queue: first player takes position 1",
+    () => signUpForPosition(email, queueTrainingId),
+    { status: 201, detail: "position=1" },
+  ],
+  [
+    "queue: second player takes position 2",
+    async () => {
+      const result = await signUpForPosition(secondEmail, queueTrainingId);
+      queueSignupId = result.payload?.[0]?.id ?? "";
+      return result;
+    },
+    { status: 201, detail: "position=2" },
+  ],
+  // The highest position leaves: exactly the row the third player cannot see.
+  [
+    "queue: second player withdraws",
+    () =>
+      rest(`/signups?id=eq.${queueSignupId}`, {
+        method: "PATCH",
+        token: () => supabaseToken(secondEmail, password),
+        body: { status: "withdrawn" },
+      }),
+    { status: 200, detail: "rows=1" },
+  ],
+  [
+    "queue: third player takes position 3 despite the hidden withdrawn row",
+    () => signUpForPosition(thirdEmail, queueTrainingId),
+    { status: 201, detail: "position=3" },
+  ],
+  [
+    "database accepts signing up again after withdrawal",
+    () =>
+      rest("/signups", {
+        method: "POST",
+        token: () => supabaseToken(email, password),
+        body: { training_id: trainingId },
+      }),
+    { status: 201, detail: "rows=1" },
   ],
   [
     "signout clears player session",
