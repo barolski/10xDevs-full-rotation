@@ -2,10 +2,11 @@
 // The player's view of one training (/t/[id]); also rendered by /dev/training-kitchen-sink so the gate
 // shows the same markup the page ships.
 import { CircleCheck, Lock } from "lucide-react";
-import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
+import SignupPanel from "@/components/trainings/SignupPanel.astro";
 import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Placement, Roster } from "@/lib/signups";
 import { isSignupOpen, type Training } from "@/lib/trainings";
 
 interface Props {
@@ -13,9 +14,27 @@ interface Props {
   unavailable: { title: string; message: string };
   now: Date;
   isOrganizer?: boolean;
+  roster: Roster;
+  placement: Placement | null;
+  userId?: string;
+  // True when the roster lookup failed, as opposed to nobody having signed up.
+  rosterFailed?: boolean;
+  notice?: "signed_up" | "withdrawn" | null;
+  error?: string | null;
 }
 
-const { training, unavailable, now, isOrganizer = false } = Astro.props;
+const {
+  training,
+  unavailable,
+  now,
+  isOrganizer = false,
+  roster,
+  placement,
+  userId,
+  rosterFailed = false,
+  notice = null,
+  error = null,
+} = Astro.props;
 const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
 ---
 
@@ -38,12 +57,19 @@ const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
           <h1>{training.title}</h1>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <TrainingDetails training={training} now={now} />
-        {/* S-02 (player-signup-and-withdraw) replaces this block with sign-up / withdraw and the rosters. */}
-        <p class="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
-          Sign-up opens here soon.
-        </p>
+      <CardContent>
+        {/* SignupPanel owns the details too, so it can put them beside the rosters when there is room. */}
+        <SignupPanel
+          training={training}
+          now={now}
+          roster={roster}
+          placement={placement}
+          userId={userId}
+          open={open}
+          failed={rosterFailed}
+          notice={notice}
+          error={error}
+        />
       </CardContent>
       {isOrganizer && (
         <CardFooter className="border-t">

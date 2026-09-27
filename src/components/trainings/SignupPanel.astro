@@ -1,0 +1,124 @@
+---
+// The player's view of one training's body on /t/[id]: details and the sign-up action on the left,
+// both rosters on the right once there is room for them.
+// Also rendered by /dev/training-kitchen-sink, so the gate shows the markup the page ships.
+//
+// The breakpoint is a container query, not a viewport one: this panel is rendered both full-width on
+// the page and inside narrow kitchen-sink cards, and it should follow its own width in each.
+import { CircleAlert, CircleCheck, LogIn, LogOut, Users } from "lucide-react";
+import RosterList from "@/components/trainings/RosterList.astro";
+import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { badgeVariants } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { freeMainSlots, MAIN_LIST_SIZE, signupErrorMessage, type Placement, type Roster } from "@/lib/signups";
+import type { Training } from "@/lib/trainings";
+
+interface Props {
+  training: Training;
+  now: Date;
+  roster: Roster;
+  placement: Placement | null;
+  userId?: string;
+  open: boolean;
+  // True when the roster lookup itself failed: a temporary failure must not read as "nobody signed up".
+  failed: boolean;
+  notice?: "signed_up" | "withdrawn" | null;
+  error?: string | null;
+}
+
+const { training, now, roster, placement, userId, open, failed, notice = null, error = null } = Astro.props;
+
+const errorMessage = signupErrorMessage(error);
+const noticeMessage =
+  notice === "signed_up" ? "You're signed up." : notice === "withdrawn" ? "You've withdrawn your sign-up." : null;
+const free = freeMainSlots(roster);
+---
+
+<div class="@container space-y-4">
+  {errorMessage && (
+    <Alert variant="destructive">
+      <CircleAlert />
+      <AlertDescription>{errorMessage}</AlertDescription>
+    </Alert>
+  )}
+  {noticeMessage && !errorMessage && (
+    <Alert>
+      <CircleCheck />
+      <AlertDescription>{noticeMessage}</AlertDescription>
+    </Alert>
+  )}
+
+  <div class="grid items-start gap-6 @2xl:grid-cols-2 @2xl:gap-8">
+    <div class="space-y-6">
+      <TrainingDetails training={training} now={now} />
+
+      {/* The player's own status comes first: it is the one fact they opened the link for. */}
+      <div class="space-y-3">
+        {placement ? (
+          <p class="flex flex-wrap items-center gap-2">
+            <span class:list={[badgeVariants({ variant: placement.list === "main" ? "success" : "secondary" })]}>
+              {placement.list === "main" ? (
+                <CircleCheck className="size-3.5" aria-hidden="true" />
+              ) : (
+                <Users className="size-3.5" aria-hidden="true" />
+              )}
+              {placement.list === "main" ? "Main list" : "Waitlist"}
+              <span class="tabular-nums">#{placement.rank}</span>
+            </span>
+            <span class="text-muted-foreground text-sm">
+              {placement.list === "main" ? "You're in." : "You'll move up if someone withdraws."}
+            </span>
+          </p>
+        ) : (
+          <p class="text-muted-foreground text-sm">
+            {free > 0
+              ? `${free} of ${MAIN_LIST_SIZE} spots left on the main list.`
+              : "The main list is full — signing up now puts you on the waitlist."}
+          </p>
+        )}
+
+        {open && (
+          <form method="POST" action={`/api/trainings/${training.id}/${placement ? "withdraw" : "signup"}`}>
+            {placement ? (
+              <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
+                <LogOut aria-hidden="true" />
+                Withdraw
+              </button>
+            ) : (
+              <button type="submit" class:list={[cn(buttonVariants(), "w-full")]}>
+                <LogIn aria-hidden="true" />
+                Sign up
+              </button>
+            )}
+          </form>
+        )}
+      </div>
+    </div>
+
+    {failed ? (
+      <p class="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
+        Could not load who's signed up. Please try again in a moment.
+      </p>
+    ) : (
+      <div class="space-y-4">
+        <RosterList
+          title="Main list"
+          entries={roster.main}
+          emptyLabel="Nobody has signed up yet."
+          highlightUserId={userId}
+          count={`${roster.main.length}/${MAIN_LIST_SIZE}`}
+        />
+        {roster.waitlist.length > 0 && (
+          <RosterList
+            title="Waitlist"
+            entries={roster.waitlist}
+            emptyLabel="Nobody is waiting."
+            highlightUserId={userId}
+          />
+        )}
+      </div>
+    )}
+  </div>
+</div>

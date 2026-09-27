@@ -2,19 +2,43 @@
 // The link organizers share on WhatsApp. Middleware sends anonymous visitors to sign-in with ?next=.
 import Layout from "@/layouts/Layout.astro";
 import PlayerTrainingCard from "@/components/trainings/PlayerTrainingCard.astro";
+import { loadRoster } from "@/lib/signup-queries";
 import { loadTraining, unavailableTraining } from "@/lib/training-queries";
+import { placementOf, splitRoster } from "@/lib/signups";
 
-const { isOrganizer } = Astro.locals;
+const { isOrganizer, user } = Astro.locals;
 const now = new Date();
 const { training, failed } = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
 const unavailable = unavailableTraining(failed);
 if (!training) {
   Astro.response.status = unavailable.status;
 }
+
+// Only worth a query once the training is known to exist.
+const rosterLoad = training
+  ? await loadRoster(training.id, Astro.request.headers, Astro.cookies)
+  : { entries: [], failed: false };
+const roster = splitRoster(rosterLoad.entries);
+const placement = placementOf(roster, user?.id);
+
+const params = Astro.url.searchParams;
+const notice = params.has("signed_up") ? "signed_up" : params.has("withdrawn") ? "withdrawn" : null;
 ---
 
 <Layout title={training?.title ?? unavailable.title}>
-  <main class="mx-auto w-full max-w-md flex-1 p-4 sm:pt-8">
-    <PlayerTrainingCard training={training} unavailable={unavailable} now={now} isOrganizer={isOrganizer} />
+  {/* Phone-first single column; from lg the card gets room for details and rosters side by side. */}
+  <main class="mx-auto w-full max-w-md flex-1 p-4 sm:pt-8 lg:max-w-3xl">
+    <PlayerTrainingCard
+      training={training}
+      unavailable={unavailable}
+      now={now}
+      isOrganizer={isOrganizer}
+      roster={roster}
+      placement={placement}
+      userId={user?.id}
+      rosterFailed={rosterLoad.failed}
+      notice={notice}
+      error={params.get("error")}
+    />
   </main>
 </Layout>

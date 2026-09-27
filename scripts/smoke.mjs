@@ -135,6 +135,8 @@ const steps = [
     () => request("/api/trainings/00000000-0000-4000-8000-000000000999/signup", { method: "POST" }),
     { status: 401 },
   ],
+  ["profile page redirects anonymous user", () => request("/profile"), { status: 302, location: "/auth/signin?next=" }],
+  ["profile api rejects anonymous user", () => request("/api/profile", { method: "POST" }), { status: 401 }],
   ["signin page renders for anonymous user", () => request("/auth/signin"), { status: 200 }],
   [
     "signup creates account",
@@ -300,6 +302,17 @@ const steps = [
     "withdraw rejects a player who is not signed up",
     () => request(`/api/trainings/${trainingId}/withdraw`, { method: "POST" }),
     { status: 302, location: trainingLocation("error=not_signed_up") },
+  ],
+  ["profile page renders for player", () => request("/profile"), { status: 200 }],
+  [
+    "profile rejects a name over the limit",
+    () => request("/api/profile", { method: "POST", form: { nickname: "x".repeat(41) } }),
+    { status: 302, location: "/profile?error=nickname_too_long" },
+  ],
+  [
+    "profile saves a valid name",
+    () => request("/api/profile", { method: "POST", form: { nickname: "Smoke Player" } }),
+    { status: 302, location: "/profile?saved=1" },
   ],
   [
     "database rejects player insert (RLS)",

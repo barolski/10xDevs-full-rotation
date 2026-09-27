@@ -1,0 +1,54 @@
+---
+// One roster (main list or waitlist), rendered by name. Shared by both lists so they can never drift.
+import { rosterLabel } from "@/lib/profiles";
+import type { SignupEntry } from "@/lib/signups";
+
+interface Props {
+  title: string;
+  entries: SignupEntry[];
+  emptyLabel: string;
+  // The signed-in player, marked on their own row.
+  highlightUserId?: string;
+  // Shown next to the title, e.g. "8/12". Omitted for the waitlist, which has no cap.
+  count?: string;
+}
+
+const { title, entries, emptyLabel, highlightUserId, count } = Astro.props;
+---
+
+<section class="space-y-2">
+  <h2 class="flex items-baseline justify-between gap-2 text-sm font-medium">
+    <span>{title}</span>
+    {count && <span class="text-muted-foreground text-xs tabular-nums">{count}</span>}
+  </h2>
+  {entries.length === 0 ? (
+    <p class="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-sm">{emptyLabel}</p>
+  ) : (
+    <ol class="divide-border divide-y rounded-lg border">
+      {entries.map((entry, index) => {
+        // The accent pair (background + its own foreground) is what keeps this row readable in both
+        // themes; a translucent background alone leaves the dark theme with almost no contrast.
+        const isMe = entry.user_id === highlightUserId;
+        return (
+          <li
+            class:list={[
+              "flex items-center gap-3 py-2 text-sm",
+              isMe ? "bg-accent text-accent-foreground border-primary border-l-2 pr-3 pl-2.5 font-medium" : "px-3",
+            ]}
+          >
+            <span
+              class:list={[
+                "w-5 text-right text-xs tabular-nums",
+                isMe ? "text-accent-foreground/80" : "text-muted-foreground",
+              ]}
+            >
+              {index + 1}
+            </span>
+            <span class="min-w-0 break-words">{rosterLabel(entry)}</span>
+            {isMe && <span class="ml-auto text-xs font-semibold tracking-wide uppercase">you</span>}
+          </li>
+        );
+      })}
+    </ol>
+  )}
+</section>
