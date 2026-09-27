@@ -13,6 +13,8 @@ const organizerPassword = process.env.SMOKE_ORGANIZER_PASSWORD ?? "Organizer-Pas
 const jar = new Map();
 const CREATED_LOCATION = /^\/organizer\/trainings\/([0-9a-f-]{36})\?created=1$/;
 const UPDATED_LOCATION = /^\/organizer\/trainings\/[0-9a-f-]{36}\?updated=1$/;
+// Training ids are generated during the run, so a player-page location has to be matched as a pattern.
+const trainingLocation = (query) => new RegExp(`^/t/[0-9a-f-]{36}\\?${query}$`);
 // The local/CI-only organizer from supabase/seed.sql; used as "somebody else's row" in the RLS steps.
 const ORGANIZER_ID = "00000000-0000-4000-8000-000000000001";
 // Set by the organizer's create step, read by the later player/organizer steps.
@@ -128,6 +130,11 @@ const steps = [
     { status: 302, location: "/auth/signin?next=%2Ft%2F" },
   ],
   ["organizer api rejects anonymous user", () => request("/api/organizer/me"), { status: 401 }],
+  [
+    "signup api rejects anonymous user",
+    () => request("/api/trainings/00000000-0000-4000-8000-000000000999/signup", { method: "POST" }),
+    { status: 401 },
+  ],
   ["signin page renders for anonymous user", () => request("/auth/signin"), { status: 200 }],
   [
     "signup creates account",
@@ -245,6 +252,55 @@ const steps = [
     { status: 403 },
   ],
   ["training page 404s for malformed id", () => request("/t/not-a-uuid"), { status: 404 }],
+  // App-level sign-up flow. It ends with the player withdrawn, so the database-boundary steps below
+  // start from a clean slate on the same training.
+  [
+    "player signs up for a training",
+    () => request(`/api/trainings/${trainingId}/signup`, { method: "POST" }),
+    { status: 302, location: trainingLocation("signed_up=1") },
+  ],
+  [
+    "signup rejects a duplicate",
+    () => request(`/api/trainings/${trainingId}/signup`, { method: "POST" }),
+    { status: 302, location: trainingLocation("error=already_signed_up") },
+  ],
+  [
+    "organizer creates a parallel training 1 h later",
+    async () => {
+      const result = await rest("/trainings", {
+        method: "POST",
+        token: () => supabaseToken(organizerEmail, organizerPassword),
+        body: {
+          title: "Smoke parallel training",
+          starts_at: new Date(Date.now() + 49 * 3600 * 1000).toISOString(),
+          location: "Smoke hall C",
+        },
+      });
+      parallelTrainingId = result.payload?.[0]?.id ?? "";
+      return result;
+    },
+    { status: 201, detail: "rows=1" },
+  ],
+  [
+    "signup rejects an overlapping training",
+    () => request(`/api/trainings/${parallelTrainingId}/signup`, { method: "POST" }),
+    { status: 302, location: trainingLocation("error=overlapping_signup") },
+  ],
+  [
+    "signup rejects a malformed training id",
+    () => request("/api/trainings/not-a-uuid/signup", { method: "POST" }),
+    { status: 302, location: "/dashboard?error=not_found" },
+  ],
+  [
+    "player withdraws from a training",
+    () => request(`/api/trainings/${trainingId}/withdraw`, { method: "POST" }),
+    { status: 302, location: trainingLocation("withdrawn=1") },
+  ],
+  [
+    "withdraw rejects a player who is not signed up",
+    () => request(`/api/trainings/${trainingId}/withdraw`, { method: "POST" }),
+    { status: 302, location: trainingLocation("error=not_signed_up") },
+  ],
   [
     "database rejects player insert (RLS)",
     () =>
@@ -365,23 +421,6 @@ const steps = [
         body: { training_id: trainingId },
       }),
     { status: 409 },
-  ],
-  [
-    "organizer creates a parallel training 1 h later",
-    async () => {
-      const result = await rest("/trainings", {
-        method: "POST",
-        token: () => supabaseToken(organizerEmail, organizerPassword),
-        body: {
-          title: "Smoke parallel training",
-          starts_at: new Date(Date.now() + 49 * 3600 * 1000).toISOString(),
-          location: "Smoke hall C",
-        },
-      });
-      parallelTrainingId = result.payload?.[0]?.id ?? "";
-      return result;
-    },
-    { status: 201, detail: "rows=1" },
   ],
   [
     "database rejects a signup overlapping within 120 minutes",
