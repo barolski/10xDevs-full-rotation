@@ -2,6 +2,7 @@ import type { AstroCookies } from "astro";
 import { createClient } from "@/lib/supabase";
 import { PROFILE_COLUMNS, type Profile } from "@/lib/profiles";
 import type { SignupEntry } from "@/lib/signups";
+import { isUuid } from "@/lib/trainings";
 
 // Server-only (reads secrets through createClient): keep it out of src/lib/signups.ts and
 // src/lib/profiles.ts, which the islands bundle for the browser.
@@ -50,7 +51,24 @@ export interface ProfileLoad {
   failed: boolean;
 }
 
-export async function loadProfile(userId: string, headers: Headers, cookies: AstroCookies): Promise<ProfileLoad> {
+// The failed-vs-absent copy, kept beside the loaders like unavailableTraining() in training-queries.ts,
+// so a temporary failure never reads as "gone" and the two stories cannot drift between views.
+export const ROSTER_UNAVAILABLE = "Could not load who's signed up. Please try again in a moment.";
+
+export function unavailableProfile(failed: boolean) {
+  return failed
+    ? { status: 503, message: "Could not load your profile. Please try again in a moment." }
+    : { status: 404, message: "Your profile is missing. Sign out and back in, then try again." };
+}
+
+// Takes `string | undefined` and guards like loadTraining: an empty id would reach PostgREST as
+// `user_id=eq.` and come back as 22P02, i.e. a database error rather than "no such profile".
+export async function loadProfile(
+  userId: string | undefined,
+  headers: Headers,
+  cookies: AstroCookies,
+): Promise<ProfileLoad> {
+  if (!isUuid(userId)) return { profile: null, failed: false };
   const supabase = createClient(headers, cookies);
   if (!supabase) return { profile: null, failed: true };
 

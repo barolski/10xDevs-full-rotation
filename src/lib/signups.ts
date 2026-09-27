@@ -85,8 +85,16 @@ export function signupErrorMessage(code: string | null): string | null {
 
 // The signups triggers raise these as exception messages; a duplicate is caught by the partial
 // unique index instead, which arrives as SQLSTATE 23505.
-export function mapSignupDbError(error: { message: string; code?: string }): SignupErrorCode {
-  if (error.code === "23505") return "already_signed_up";
+export function mapSignupDbError(error: { message: string; code?: string; details?: string | null }): SignupErrorCode {
+  // Two indexes raise 23505: the one-active-per-player index, which really is the player being
+  // already signed up, and the queue-position index, which can only mean an internal invariant broke.
+  // Reporting the second as a user error is how a position bug hides behind a plausible message.
+  if (error.code === "23505") {
+    const target = `${error.message} ${error.details ?? ""}`;
+    return target.includes("signups_one_active_per_player_idx") ? "already_signed_up" : "save_failed";
+  }
+  // `signup_immutable` has no code on purpose: the update grant covers only `status`, so no client can
+  // reach it. If a future slice grants more columns, give it a code and copy rather than save_failed.
   if (error.message.includes("signup_closed")) return "signup_closed";
   if (error.message.includes("overlapping_signup")) return "overlapping_signup";
   if (error.message.includes("player_blocked")) return "player_blocked";

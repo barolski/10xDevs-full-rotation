@@ -73,16 +73,43 @@ create policy "signups_update_own_active"
   using (user_id = (select auth.uid()) and status = 'active')
   with check (user_id = (select auth.uid()));
 
+-- The next queue number for a training, counting EVERY row — including sign-ups
+-- the caller cannot see.
+--
+-- This has to be security definer. The select policy below hides another
+-- player's withdrawn row, so computing max(position) as the caller returns a
+-- number that is already taken the moment anyone withdraws: the next player
+-- collides with signups_training_position_idx, and because only the withdrawer
+-- and organizers can see that row, sign-ups stay broken for everyone else.
+-- Same reason is_organizer() and is_blocked() are definer.
+create function public.next_signup_position(p_training uuid)
+returns integer
+language sql
+security definer
+set search_path = ''
+as $$
+  select coalesce(max(position), 0) + 1 from public.signups where training_id = p_training;
+$$;
+
+comment on function public.next_signup_position(uuid) is
+  'Trigger helper: next queue number for a training, counting rows RLS hides from the caller.';
+
+-- signups_assign_position() runs with invoker rights, so it calls this as the
+-- signed-in user; anon has no business with it.
+revoke execute on function public.next_signup_position(uuid) from public, anon;
+grant execute on function public.next_signup_position(uuid) to authenticated;
+
 -- Admission rules and the queue number, in one serialized transaction.
 --
--- The advisory lock is what makes max(position) + 1 safe: two players racing for
+-- The advisory lock is what makes the position read safe: two players racing for
 -- the last main-list slot are serialized per training. A row lock on
 -- public.trainings could not do this job — SELECT ... FOR UPDATE needs UPDATE
 -- privilege and passes through trainings_update_organizer (USING is_organizer()),
 -- so a player would lock nothing.
 --
--- Invoker rights on purpose: the only signups this reads are the caller's own,
--- which their own SELECT policy already allows.
+-- Invoker rights on purpose: the overlap check below must stay scoped to the
+-- caller's own sign-ups. The one read that must see other people's rows goes
+-- through next_signup_position() above.
 create function public.signups_assign_position()
 returns trigger
 language plpgsql
@@ -91,7 +118,13 @@ as $$
 declare
   v_starts timestamptz;
 begin
+  -- Two locks, always in this order (training, then user) so concurrent inserts can never deadlock.
+  -- The training lock serializes the queue number. The user lock serializes the overlap check below,
+  -- which is a per-player invariant spanning two trainings: without it, two parallel sign-ups by the
+  -- same player for overlapping trainings take different training locks, neither sees the other's
+  -- uncommitted row under READ COMMITTED, and both commit.
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(new.training_id::text, 0));
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(new.user_id::text, 1));
 
   select starts_at into v_starts from public.trainings where id = new.training_id;
   if not found then
@@ -110,6 +143,12 @@ begin
   -- 120 minutes apart (roadmap Open Question #2, resolved 2026-09-27). The
   -- waitlist counts: a waitlisted player can be promoted (FR-016), which would
   -- turn the double booking into a real clash.
+  --
+  -- Enforced at sign-up time ONLY. An organizer may still move a training's
+  -- starts_at while its window is open (trainings_update_organizer, PRD FR-005
+  -- last-write-wins), and nothing re-validates existing sign-ups, so an edit can
+  -- leave a player holding two sign-ups this rule would have refused. S-04 and
+  -- S-07 inherit that: do not assume the invariant holds for existing rows.
   if exists (
     select 1
     from public.signups s
@@ -122,9 +161,7 @@ begin
     raise exception 'overlapping_signup' using errcode = 'check_violation';
   end if;
 
-  select coalesce(max(position), 0) + 1 into new.position
-  from public.signups
-  where training_id = new.training_id;
+  new.position := public.next_signup_position(new.training_id);
 
   return new;
 end;

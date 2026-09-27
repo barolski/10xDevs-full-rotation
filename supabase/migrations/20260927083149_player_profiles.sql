@@ -57,7 +57,7 @@ create policy "profiles_update_own"
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
 
-create function public.touch_updated_at()
+create function public.profiles_touch_updated_at()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -71,7 +71,7 @@ $$;
 create trigger profiles_touch_updated_at
   before update on public.profiles
   for each row
-  execute function public.touch_updated_at();
+  execute function public.profiles_touch_updated_at();
 
 -- The nickname seed is the e-mail local part, capped at the column's 40 chars.
 -- An account without a usable local part (empty or whitespace-only) falls back

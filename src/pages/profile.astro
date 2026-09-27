@@ -6,14 +6,15 @@ import Layout from "@/layouts/Layout.astro";
 import ProfileForm from "@/components/profile/ProfileForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadProfile } from "@/lib/signup-queries";
+import { loadProfile, unavailableProfile } from "@/lib/signup-queries";
 import { profileErrorMessage } from "@/lib/profiles";
 
 const { user } = Astro.locals;
-// Middleware guarantees a session on /profile; the fallback keeps the query honest if that changes.
-const { profile, failed } = await loadProfile(user?.id ?? "", Astro.request.headers, Astro.cookies);
-if (failed) {
-  Astro.response.status = 503;
+// Middleware guarantees a session on /profile; loadProfile guards the id if that ever changes.
+const { profile, failed } = await loadProfile(user?.id, Astro.request.headers, Astro.cookies);
+const unavailable = unavailableProfile(failed);
+if (!profile) {
+  Astro.response.status = unavailable.status;
 }
 
 const params = Astro.url.searchParams;
@@ -42,11 +43,7 @@ const error = profileErrorMessage(params.get("error"));
         {profile ? (
           <ProfileForm initialNickname={profile.nickname} serverError={error} client:load />
         ) : (
-          <p class="text-muted-foreground text-sm">
-            {failed
-              ? "Could not load your profile. Please try again in a moment."
-              : "Your profile is missing. Sign out and back in, then try again."}
-          </p>
+          <p class="text-muted-foreground text-sm">{unavailable.message}</p>
         )}
       </CardContent>
     </Card>

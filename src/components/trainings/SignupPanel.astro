@@ -7,6 +7,7 @@
 // the page and inside narrow kitchen-sink cards, and it should follow its own width in each.
 import { CircleAlert, CircleCheck, LogIn, LogOut, Users } from "lucide-react";
 import RosterList from "@/components/trainings/RosterList.astro";
+import { ROSTER_UNAVAILABLE } from "@/lib/signup-queries";
 import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { badgeVariants } from "@/components/ui/badge";
@@ -54,53 +55,55 @@ const free = freeMainSlots(roster);
     <div class="space-y-6">
       <TrainingDetails training={training} now={now} />
 
-      {/* The player's own status comes first: it is the one fact they opened the link for. */}
-      <div class="space-y-3">
-        {placement ? (
-          <p class="flex flex-wrap items-center gap-2">
-            <span class:list={[badgeVariants({ variant: placement.list === "main" ? "success" : "secondary" })]}>
-              {placement.list === "main" ? (
-                <CircleCheck className="size-3.5" aria-hidden="true" />
-              ) : (
-                <Users className="size-3.5" aria-hidden="true" />
-              )}
-              {placement.list === "main" ? "Main list" : "Waitlist"}
-              <span class="tabular-nums">#{placement.rank}</span>
-            </span>
-            <span class="text-muted-foreground text-sm">
-              {placement.list === "main" ? "You're in." : "You'll move up if someone withdraws."}
-            </span>
-          </p>
-        ) : (
-          <p class="text-muted-foreground text-sm">
-            {free > 0
-              ? `${free} of ${MAIN_LIST_SIZE} spots left on the main list.`
-              : "The main list is full — signing up now puts you on the waitlist."}
-          </p>
-        )}
+      {/* The player's own status comes first: it is the one fact they opened the link for.
+          Suppressed entirely when the roster could not be read: an empty roster would otherwise be
+          reported as twelve free slots, and a player already on the list would be offered Sign up. */}
+      {!failed && (
+        <div class="space-y-3">
+          {placement ? (
+            <p class="flex flex-wrap items-center gap-2">
+              <span class:list={[badgeVariants({ variant: placement.list === "main" ? "success" : "secondary" })]}>
+                {placement.list === "main" ? (
+                  <CircleCheck className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <Users className="size-3.5" aria-hidden="true" />
+                )}
+                {placement.list === "main" ? "Main list" : "Waitlist"}
+                <span class="tabular-nums">#{placement.rank}</span>
+              </span>
+              <span class="text-muted-foreground text-sm">
+                {placement.list === "main" ? "You're in." : "You'll move up if someone withdraws."}
+              </span>
+            </p>
+          ) : (
+            <p class="text-muted-foreground text-sm">
+              {free > 0
+                ? `${free} of ${MAIN_LIST_SIZE} spots left on the main list.`
+                : "The main list is full — signing up now puts you on the waitlist."}
+            </p>
+          )}
 
-        {open && (
-          <form method="POST" action={`/api/trainings/${training.id}/${placement ? "withdraw" : "signup"}`}>
-            {placement ? (
-              <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
-                <LogOut aria-hidden="true" />
-                Withdraw
-              </button>
-            ) : (
-              <button type="submit" class:list={[cn(buttonVariants(), "w-full")]}>
-                <LogIn aria-hidden="true" />
-                Sign up
-              </button>
-            )}
-          </form>
-        )}
-      </div>
+          {open && (
+            <form method="POST" action={`/api/trainings/${training.id}/${placement ? "withdraw" : "signup"}`}>
+              {placement ? (
+                <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
+                  <LogOut aria-hidden="true" />
+                  Withdraw
+                </button>
+              ) : (
+                <button type="submit" class:list={[cn(buttonVariants(), "w-full")]}>
+                  <LogIn aria-hidden="true" />
+                  Sign up
+                </button>
+              )}
+            </form>
+          )}
+        </div>
+      )}
     </div>
 
     {failed ? (
-      <p class="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
-        Could not load who's signed up. Please try again in a moment.
-      </p>
+      <p class="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">{ROSTER_UNAVAILABLE}</p>
     ) : (
       <div class="space-y-4">
         <RosterList

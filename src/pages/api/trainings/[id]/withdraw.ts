@@ -13,6 +13,10 @@ export const POST: APIRoute = async (context) => {
 
   const fail = (code: string) => context.redirect(`/t/${id}?error=${code}`);
 
+  // Same reason as in the profile route: an empty uuid filter comes back as 22P02, not zero rows.
+  const userId = context.locals.user?.id;
+  if (!isUuid(userId)) return fail("not_signed_up");
+
   const { training, failed } = await loadTraining(id, context.request.headers, context.cookies);
   if (failed) return fail("save_failed");
   if (!training) return fail("not_found");
@@ -26,7 +30,7 @@ export const POST: APIRoute = async (context) => {
     .from("signups")
     .update({ status: "withdrawn" })
     .eq("training_id", id)
-    .eq("user_id", context.locals.user?.id ?? "")
+    .eq("user_id", userId)
     .eq("status", "active")
     .select("id")
     .overrideTypes<{ id: string }[], { merge: false }>();
