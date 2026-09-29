@@ -97,6 +97,37 @@ const states: State[] = [
     signups: entries(10, { includeMeAt: 2 }),
   },
   {
+    // Window closed, status still `open`: the transient state before the cron writes the outcome.
+    label: "Finalizing (window closed, awaiting outcome)",
+    training: {
+      ...base,
+      id: "00000000-0000-0000-0000-000000000005",
+      starts_at: "2026-10-01T12:00:00Z",
+      status: "open",
+    },
+    signups: entries(9, { includeMeAt: 2 }),
+  },
+  {
+    label: "Confirmed",
+    training: {
+      ...base,
+      id: "00000000-0000-0000-0000-000000000006",
+      starts_at: "2026-10-01T12:00:00Z",
+      status: "confirmed",
+    },
+    signups: entries(11, { includeMeAt: 2 }),
+  },
+  {
+    label: "Cancelled",
+    training: {
+      ...base,
+      id: "00000000-0000-0000-0000-000000000007",
+      starts_at: "2026-10-01T12:00:00Z",
+      status: "cancelled",
+    },
+    signups: entries(4, { includeMeAt: 2 }),
+  },
+  {
     label: "Open, no note, long title and location",
     training: {
       ...base,

@@ -4,9 +4,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CircleCheck, CircleX, DoorOpen, Hourglass } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { formatTrainingDateTime } from "@/lib/time";
-import { isSignupOpen, TRAINING_COLUMNS, trainingErrorMessage, type Training } from "@/lib/trainings";
+import {
+  TRAINING_COLUMNS,
+  TRAINING_STATUS_BADGE,
+  trainingDisplayStatus,
+  trainingErrorMessage,
+  type Training,
+  type TrainingDisplayStatus,
+} from "@/lib/trainings";
+
+// One lucide glyph per display status; the label + colour come from TRAINING_STATUS_BADGE.
+const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
+  open: DoorOpen,
+  finalizing: Hourglass,
+  confirmed: CircleCheck,
+  cancelled: CircleX,
+};
 
 const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
 const now = new Date();
@@ -79,7 +95,9 @@ const sections = [
               <ul class="divide-border divide-y">
                 {items.map((training) => {
                   const startsAt = new Date(training.starts_at);
-                  const open = isSignupOpen(startsAt, now);
+                  const display = trainingDisplayStatus(training, now);
+                  const badge = TRAINING_STATUS_BADGE[display];
+                  const Icon = STATUS_ICON[display];
                   return (
                     <li>
                       <a
@@ -92,8 +110,9 @@ const sections = [
                             {formatTrainingDateTime(startsAt)} · {training.location}
                           </span>
                         </span>
-                        <span class:list={[badgeVariants({ variant: open ? "success" : "secondary" })]}>
-                          {open ? "Sign-ups open" : "Sign-ups closed"}
+                        <span class:list={[badgeVariants({ variant: badge.variant })]}>
+                          <Icon className="size-3.5" aria-hidden="true" />
+                          {badge.label}
                         </span>
                       </a>
                     </li>
