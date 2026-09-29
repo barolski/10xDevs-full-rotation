@@ -6,6 +6,11 @@
 // Mirrors the comment in the signups migration (supabase/migrations/*_signups.sql).
 export const MAIN_LIST_SIZE = 12;
 
+// A training confirms once its main list has at least this many players when sign-ups close
+// (FR-013/FR-015); fewer and it is cancelled (FR-014). Mirrors the `>= 10` in
+// public.close_due_trainings() (supabase/migrations/*_training_status.sql), which is authoritative.
+export const MIN_CONFIRMED = 10;
+
 // A player may not hold two active sign-ups for trainings starting less than this many minutes
 // apart. Enforced by the signups trigger, which is the authoritative copy of this value.
 export const OVERLAP_WINDOW_MINUTES = 120;
