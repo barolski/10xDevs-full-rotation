@@ -26,6 +26,7 @@ const base: Training = {
   starts_at: "2026-10-02T17:00:00Z",
   location: "SP 12 sports hall, ul. Sportowa 4, Kraków",
   note: "Bring indoor shoes. Hall doors open at 18:45.",
+  status: "open",
 };
 
 // The signed-in player these states are seen as.
@@ -94,6 +95,37 @@ const states: State[] = [
     label: "Closed (starts in under 3 h), signed up",
     training: { ...base, id: "00000000-0000-0000-0000-000000000003", starts_at: "2026-10-01T12:00:00Z", note: null },
     signups: entries(10, { includeMeAt: 2 }),
+  },
+  {
+    // Window closed, status still `open`: the transient state before the cron writes the outcome.
+    label: "Finalizing (window closed, awaiting outcome)",
+    training: {
+      ...base,
+      id: "00000000-0000-0000-0000-000000000005",
+      starts_at: "2026-10-01T12:00:00Z",
+      status: "open",
+    },
+    signups: entries(9, { includeMeAt: 2 }),
+  },
+  {
+    label: "Confirmed",
+    training: {
+      ...base,
+      id: "00000000-0000-0000-0000-000000000006",
+      starts_at: "2026-10-01T12:00:00Z",
+      status: "confirmed",
+    },
+    signups: entries(11, { includeMeAt: 2 }),
+  },
+  {
+    label: "Cancelled",
+    training: {
+      ...base,
+      id: "00000000-0000-0000-0000-000000000007",
+      starts_at: "2026-10-01T12:00:00Z",
+      status: "cancelled",
+    },
+    signups: entries(4, { includeMeAt: 2 }),
   },
   {
     label: "Open, no note, long title and location",

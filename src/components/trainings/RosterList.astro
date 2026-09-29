@@ -24,16 +24,18 @@ const { title, entries, emptyLabel, highlightUserId, count } = Astro.props;
   {entries.length === 0 ? (
     <p class="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-sm">{emptyLabel}</p>
   ) : (
-    <ol class="divide-border divide-y rounded-lg border">
+    <ol class="space-y-0.5 rounded-lg border p-1.5">
       {entries.map((entry, index) => {
-        // The accent pair (background + its own foreground) is what keeps this row readable in both
-        // themes; a translucent background alone leaves the dark theme with almost no contrast.
+        // The signed-in player's row is highlighted as a rounded inset pill, not a full-bleed band:
+        // the list has inner padding and gaps, so the accent fill is a self-contained rounded cell
+        // with its own corners. The accent pair (background + matching foreground) keeps it readable
+        // in both themes, where a translucent tint alone would wash out in the dark theme.
         const isMe = entry.user_id === highlightUserId;
         return (
           <li
             class:list={[
-              "flex items-center gap-3 py-2 text-sm",
-              isMe ? "bg-accent text-accent-foreground border-primary border-l-2 pr-3 pl-2.5 font-medium" : "px-3",
+              "flex items-center gap-3 rounded-md px-2.5 py-1.5 text-sm",
+              isMe && "bg-accent text-accent-foreground font-medium",
             ]}
           >
             <span

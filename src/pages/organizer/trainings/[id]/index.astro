@@ -3,12 +3,27 @@ import Layout from "@/layouts/Layout.astro";
 import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
 import CopyLinkButton from "@/components/trainings/CopyLinkButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CircleCheck, Lock } from "lucide-react";
+import { CircleCheck, CircleX, DoorOpen, Hourglass } from "lucide-react";
 import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadTraining, unavailableTraining } from "@/lib/training-queries";
-import { isSignupOpen } from "@/lib/trainings";
+import { loadRoster } from "@/lib/signup-queries";
+import { MIN_CONFIRMED, splitRoster } from "@/lib/signups";
+import {
+  isSignupOpen,
+  TRAINING_STATUS_BADGE,
+  trainingDisplayStatus,
+  type TrainingDisplayStatus,
+} from "@/lib/trainings";
+
+// One lucide glyph per display status; the label + colour come from TRAINING_STATUS_BADGE.
+const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
+  open: DoorOpen,
+  finalizing: Hourglass,
+  confirmed: CircleCheck,
+  cancelled: CircleX,
+};
 
 const now = new Date();
 const { training, failed } = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
@@ -19,6 +34,18 @@ if (!training) {
 
 const shareUrl = training ? new URL(`/t/${training.id}`, Astro.url.origin).toString() : "";
 const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
+const display = training ? trainingDisplayStatus(training, now) : null;
+const badge = display ? TRAINING_STATUS_BADGE[display] : null;
+const StatusIcon = display ? STATUS_ICON[display] : null;
+
+// Main-list count against the minimum, so the organizer sees why it confirmed or cancelled (and,
+// while open, live progress toward the minimum). Organizers can read all active sign-ups via RLS.
+// On a roster-load failure show a dash, not 0: "0 / min 10" would misread as "nobody signed up".
+let mainCount: number | null = null;
+if (training) {
+  const { entries, failed } = await loadRoster(training.id, Astro.request.headers, Astro.cookies);
+  if (!failed) mainCount = splitRoster(entries).main.length;
+}
 const notice = Astro.url.searchParams.has("created")
   ? "Training created. Copy the link and share it with the group."
   : Astro.url.searchParams.has("updated")
@@ -44,17 +71,15 @@ const notice = Astro.url.searchParams.has("created")
           )}
           <Card>
             <CardHeader className="gap-3">
-              {open ? (
-                <span class:list={[badgeVariants({ variant: "success" })]}>
-                  <CircleCheck className="size-3.5" aria-hidden="true" />
-                  Sign-ups open
+              <div class="flex flex-wrap items-center gap-3">
+                <span class:list={[badgeVariants({ variant: badge?.variant })]}>
+                  {StatusIcon && <StatusIcon className="size-3.5" aria-hidden="true" />}
+                  {badge?.label}
                 </span>
-              ) : (
-                <span class:list={[badgeVariants({ variant: "secondary" })]}>
-                  <Lock className="size-3.5" aria-hidden="true" />
-                  Sign-ups closed
+                <span class="text-muted-foreground text-sm">
+                  {mainCount ?? "—"} / min {MIN_CONFIRMED}
                 </span>
-              )}
+              </div>
               <CardTitle className="text-2xl">
                 <h1>{training.title}</h1>
               </CardTitle>

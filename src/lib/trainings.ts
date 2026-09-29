@@ -8,15 +8,20 @@ export const TITLE_MAX = 80;
 export const LOCATION_MAX = 120;
 export const NOTE_MAX = 500;
 
+// The persisted confirm/cancel outcome (S-03). `open` is the default until the cron finalizes it;
+// see public.close_due_trainings(). Mirrors the check constraint in the training_status migration.
+export type TrainingStatus = "open" | "confirmed" | "cancelled";
+
 export interface Training {
   id: string;
   title: string;
   starts_at: string;
   location: string;
   note: string | null;
+  status: TrainingStatus;
 }
 
-export const TRAINING_COLUMNS = "id, title, starts_at, location, note";
+export const TRAINING_COLUMNS = "id, title, starts_at, location, note, status";
 
 export function signupClosesAt(startsAt: Date): Date {
   return new Date(startsAt.getTime() - SIGNUP_CLOSE_HOURS * 60 * 60 * 1000);
@@ -25,6 +30,33 @@ export function signupClosesAt(startsAt: Date): Date {
 export function isSignupOpen(startsAt: Date, now: Date): boolean {
   return signupClosesAt(startsAt).getTime() > now.getTime();
 }
+
+// What a view shows. `finalizing` is not a stored status: it is the gap between sign-ups closing
+// (starts_at - 3h) and the next cron tick writing the outcome, during which the row is still `open`
+// though sign-ups are already closed. Every other value maps straight to the stored status.
+export type TrainingDisplayStatus = "open" | "finalizing" | "confirmed" | "cancelled";
+
+export function trainingDisplayStatus(
+  training: Pick<Training, "status" | "starts_at">,
+  now: Date,
+): TrainingDisplayStatus {
+  if (training.status !== "open") return training.status;
+  return isSignupOpen(new Date(training.starts_at), now) ? "open" : "finalizing";
+}
+
+// Label + badge variant per display status, so the list, the detail screen and the player card all
+// read from one source instead of each inventing copy. Every variant is a full -soft/-strong token
+// pair (see badge.tsx), which stays legible in dark mode. Four distinct colours on purpose: `open`
+// (sign-ups running) must not read as `confirmed` (settled) at a glance.
+export const TRAINING_STATUS_BADGE: Record<
+  TrainingDisplayStatus,
+  { label: string; variant: "info" | "warning" | "success" | "destructive" }
+> = {
+  open: { label: "Sign-ups open", variant: "info" },
+  finalizing: { label: "Finalizing", variant: "warning" },
+  confirmed: { label: "Confirmed", variant: "success" },
+  cancelled: { label: "Cancelled", variant: "destructive" },
+};
 
 export type TrainingField = "title" | "starts_at" | "location" | "note";
 
