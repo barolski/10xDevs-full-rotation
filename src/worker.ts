@@ -10,13 +10,18 @@ export default {
   async scheduled(controller, env, _ctx) {
     const firedAt = new Date(controller.scheduledTime).toISOString();
 
+    // `wrangler types` only lists SUPABASE_URL/KEY on Env when .dev.vars is present (local); in CI
+    // there is none, so the generated Env omits them. Read them through an explicit shape so the
+    // worker type-checks the same in both places, independent of what Env happens to declare.
+    const { SUPABASE_URL, SUPABASE_KEY } = env as { SUPABASE_URL?: string; SUPABASE_KEY?: string };
+
     // Mirror createClient() in src/lib/supabase.ts: no Supabase config means no-op, not a crash.
-    if (!env.SUPABASE_URL || !env.SUPABASE_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
       console.log(`[scheduled] skipped at ${firedAt}: Supabase not configured`);
       return;
     }
 
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY, {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: false },
     });
 
