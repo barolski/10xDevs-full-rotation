@@ -52,6 +52,7 @@ const ratable = training ? canRateTraining(training, now) : false;
 let mainCount: number | null = null;
 let roster: Roster | null = null;
 let rosterFailed = false;
+let ratingsFailed = false;
 let ratings = new Map<string, number>();
 if (training) {
   const rosterLoad = await loadRoster(training.id, Astro.request.headers, Astro.cookies);
@@ -66,6 +67,7 @@ if (training) {
         Astro.request.headers,
         Astro.cookies,
       );
+      ratingsFailed = ratingLoad.failed;
       ratings = ratingLoad.ratings;
     }
   }
@@ -125,9 +127,9 @@ const notice = Astro.url.searchParams.has("created")
                 <h2 class="text-sm font-medium">Player ratings</h2>
                 {!ratable ? (
                   <p class="text-muted-foreground text-sm">{ratingNote}</p>
-                ) : rosterFailed ? (
+                ) : rosterFailed || ratingsFailed ? (
                   <Alert variant="destructive">
-                    <AlertDescription>Could not load the roster. Please refresh the page.</AlertDescription>
+                    <AlertDescription>Could not load ratings. Please refresh the page.</AlertDescription>
                   </Alert>
                 ) : ratedPlayers.length === 0 ? (
                   <p class="text-muted-foreground text-sm">No players on the main list.</p>
