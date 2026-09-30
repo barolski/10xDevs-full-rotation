@@ -97,6 +97,14 @@ begin
     return null;
   end if;
 
+  -- Serialize promotions per training so two concurrent post-confirmation
+  -- withdrawals promote DISTINCT waitlisters: the second waits until the first
+  -- commits, then sees that withdrawal and stamp before choosing its target,
+  -- instead of both landing on the same first waitlister (the null-guard below
+  -- would then silently drop the second promotion). Same lock key as
+  -- signups_assign_position; post-close there are no inserts to contend with it.
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(new.training_id::text, 0));
+
   -- The withdrawn row was on the main list iff fewer than MAIN_LIST_SIZE (12,
   -- mirrors src/lib/signups.ts) active rows sit ahead of it by position. A
   -- waitlisted withdrawal frees no main slot, so it promotes no one.
