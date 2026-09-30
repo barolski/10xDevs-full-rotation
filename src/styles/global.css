@@ -173,4 +173,13 @@
   body {
     @apply bg-background text-foreground;
   }
+  /*
+   * Native <select> popup: with color-scheme set, the browser otherwise paints the option
+   * list in a generic system grey that clashes with the warm graphite dark tokens. Pin the
+   * options to the popover token pair so the list matches the rest of the UI in both themes.
+   */
+  select[data-slot="select"] option {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
 }
