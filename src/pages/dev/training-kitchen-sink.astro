@@ -118,6 +118,29 @@ const states: State[] = [
     signups: entries(11, { includeMeAt: 2 }),
   },
   {
+    // Confirmed and not yet started: sign-ups are closed, but a main-list player can still withdraw
+    // (freeing a slot promotes the first waitlister, FR-016), so Withdraw shows with the absence note.
+    label: "Confirmed, main list, can withdraw",
+    training: {
+      ...base,
+      id: "00000000-0000-0000-0000-000000000008",
+      starts_at: "2026-10-01T12:00:00Z",
+      status: "confirmed",
+    },
+    signups: entries(MAIN_LIST_SIZE + 1, { includeMeAt: 3 }),
+  },
+  {
+    // Same window, but the signed-in player is on the waitlist: they may withdraw too (no promotion).
+    label: "Confirmed, waitlist, can withdraw",
+    training: {
+      ...base,
+      id: "00000000-0000-0000-0000-000000000009",
+      starts_at: "2026-10-01T12:00:00Z",
+      status: "confirmed",
+    },
+    signups: entries(MAIN_LIST_SIZE + 1, { includeMeAt: MAIN_LIST_SIZE + 1 }),
+  },
+  {
     label: "Cancelled",
     training: {
       ...base,
