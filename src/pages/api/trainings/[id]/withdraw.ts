@@ -1,12 +1,13 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase";
 import { loadTraining } from "@/lib/training-queries";
-import { isSignupOpen, isUuid } from "@/lib/trainings";
+import { canWithdraw, isUuid } from "@/lib/trainings";
 import { mapSignupDbError } from "@/lib/signups";
 
 // The database allows a withdrawal at any time on purpose — a late withdrawal counts as an absence
-// (FR-023) and a post-confirmation one promotes the first waitlisted player (FR-016), both owned by
-// later slices. Until those exist, this route is the rule: withdrawal only while sign-ups are open.
+// (FR-023, S-07) and a post-confirmation one promotes the first waitlisted player (FR-016, handled by
+// the promote_after_withdrawal trigger). canWithdraw() is the app-level rule: while sign-ups are open,
+// or on a confirmed training before it starts. Finalizing, cancelled and started trainings are closed.
 export const POST: APIRoute = async (context) => {
   const { id } = context.params;
   if (!isUuid(id)) return context.redirect("/dashboard?error=not_found");
@@ -20,7 +21,7 @@ export const POST: APIRoute = async (context) => {
   const { training, failed } = await loadTraining(id, context.request.headers, context.cookies);
   if (failed) return fail("save_failed");
   if (!training) return fail("not_found");
-  if (!isSignupOpen(new Date(training.starts_at), new Date())) return fail("signup_closed");
+  if (!canWithdraw(training, new Date())) return fail("signup_closed");
 
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) return fail("save_failed");
