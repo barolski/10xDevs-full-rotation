@@ -41,6 +41,14 @@ export function canWithdraw(training: Pick<Training, "starts_at" | "status">, no
   return isSignupOpen(startsAt, now) || (training.status === "confirmed" && startsAt.getTime() > now.getTime());
 }
 
+// Ratings are a post-training assessment the organizer makes once a session has actually taken
+// place (S-06 later balances teams on ratings from already-played trainings). So a rating can be
+// set only on a confirmed training that has already started — never on a future, still-open, or
+// cancelled one. Mirrored by the organizer page (which hides the UI) and the ratings API route.
+export function canRateTraining(training: Pick<Training, "status" | "starts_at">, now: Date): boolean {
+  return training.status === "confirmed" && new Date(training.starts_at).getTime() <= now.getTime();
+}
+
 // What a view shows. `finalizing` is not a stored status: it is the gap between sign-ups closing
 // (starts_at - 3h) and the next cron tick writing the outcome, during which the row is still `open`
 // though sign-ups are already closed. Every other value maps straight to the stored status.

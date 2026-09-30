@@ -29,9 +29,9 @@ drop table if exists public.player_ratings;
 drop function if exists public.player_ratings_touch();
 
 -- rating defaults to 5: an unrated player is treated as a middle rating rather
--- than a missing value, so S-06 never has to handle "no rating". Clearing a
--- rating deletes the row (the effective value falls back to 5), which is why
--- organizers need DELETE here where the old table granted none.
+-- than a missing value. The organizer page seeds a default-5 row for every
+-- main-list player of a played training, so a player who played always has a
+-- row; a rating is only ever inserted or adjusted, never deleted.
 create table public.training_ratings (
   training_id uuid not null references public.trainings (id) on delete cascade,
   user_id uuid not null references public.profiles (user_id) on delete cascade,
@@ -51,7 +51,6 @@ revoke all on public.training_ratings from anon, authenticated;
 grant select on public.training_ratings to authenticated;
 grant insert (training_id, user_id, rating) on public.training_ratings to authenticated;
 grant update (rating) on public.training_ratings to authenticated;
-grant delete on public.training_ratings to authenticated;
 
 -- Organizers only, for every command: a player must not learn any rating, not
 -- even their own, and not by calling PostgREST directly.
@@ -73,12 +72,6 @@ create policy "training_ratings_update_organizer"
   to authenticated
   using ((select public.is_organizer()))
   with check ((select public.is_organizer()));
-
-create policy "training_ratings_delete_organizer"
-  on public.training_ratings
-  for delete
-  to authenticated
-  using ((select public.is_organizer()));
 
 create function public.training_ratings_touch()
 returns trigger
