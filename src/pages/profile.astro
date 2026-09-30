@@ -1,6 +1,6 @@
 ---
-// The player's own profile. Only the name rosters show is editable here; positions and the
-// organizer-set rating belong to the positions-and-ratings slice.
+// The player's own profile: the name rosters show, plus the player's court positions. The
+// organizer-set rating is per-training and lives on the organizer's training page, not here.
 import { CircleCheck } from "lucide-react";
 import Layout from "@/layouts/Layout.astro";
 import ProfileForm from "@/components/profile/ProfileForm";
@@ -41,7 +41,13 @@ const error = profileErrorMessage(params.get("error"));
           </Alert>
         )}
         {profile ? (
-          <ProfileForm initialNickname={profile.nickname} serverError={error} client:load />
+          <ProfileForm
+            initialNickname={profile.nickname}
+            initialPrimary={profile.primary_position}
+            initialSecondary={profile.secondary_position}
+            serverError={error}
+            client:load
+          />
         ) : (
           <p class="text-muted-foreground text-sm">{unavailable.message}</p>
         )}

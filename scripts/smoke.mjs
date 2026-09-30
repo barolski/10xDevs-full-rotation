@@ -390,26 +390,26 @@ const steps = [
   ],
   [
     "database hides ratings from player (RLS)",
-    () => rest("/player_ratings", { method: "GET", token: () => supabaseToken(email, password) }),
+    () => rest("/training_ratings", { method: "GET", token: () => supabaseToken(email, password) }),
     { status: 200, detail: "rows=0" },
   ],
   [
     "database rejects rating insert by player (RLS)",
     () =>
-      rest("/player_ratings", {
+      rest("/training_ratings", {
         method: "POST",
         token: () => supabaseToken(email, password),
-        body: { user_id: playerId, rating: 5 },
+        body: { training_id: trainingId, user_id: playerId, rating: 5 },
       }),
     { status: 403 },
   ],
   [
     "database allows rating insert by organizer",
     () =>
-      rest("/player_ratings", {
+      rest("/training_ratings", {
         method: "POST",
         token: () => supabaseToken(organizerEmail, organizerPassword),
-        body: { user_id: playerId, rating: 7.5 },
+        body: { training_id: trainingId, user_id: playerId, rating: 7.5 },
       }),
     { status: 201, detail: "rows=1" },
   ],

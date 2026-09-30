@@ -7,7 +7,7 @@ import ProfileForm from "@/components/profile/ProfileForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CircleCheck } from "lucide-react";
-import { NICKNAME_MAX, profileErrorMessage } from "@/lib/profiles";
+import { NICKNAME_MAX, profileErrorMessage, type PlayerPosition } from "@/lib/profiles";
 
 // Production: empty 404. No frontmatter `return` here; it crashes typescript-eslint on .astro files.
 const isDev = import.meta.env.DEV;
@@ -17,12 +17,35 @@ if (!isDev) {
 
 const theme = Astro.url.searchParams.get("theme") === "dark" ? "dark" : "light";
 
-const states: { label: string; nickname: string; error?: string | null; saved?: boolean }[] = [
-  { label: "Seeded nickname (from the e-mail local part)", nickname: "jan.kowalski91" },
-  { label: "Edited nickname", nickname: "Kuba" },
-  { label: "Saved", nickname: "Kuba", saved: true },
+interface State {
+  label: string;
+  nickname: string;
+  primary?: PlayerPosition | null;
+  secondary?: PlayerPosition | null;
+  error?: string | null;
+  saved?: boolean;
+}
+
+const states: State[] = [
+  { label: "Seeded nickname, no positions", nickname: "jan.kowalski91" },
+  { label: "Primary only", nickname: "Kuba", primary: "setter" },
+  { label: "Primary + secondary", nickname: "Kuba", primary: "outside", secondary: "libero" },
+  { label: "Saved", nickname: "Kuba", primary: "middle", secondary: "opposite", saved: true },
   { label: "Server error: name too long", nickname: "x".repeat(NICKNAME_MAX + 1), error: "nickname_too_long" },
   { label: "Server error: name required", nickname: "", error: "missing_nickname" },
+  {
+    label: "Server error: secondary without primary",
+    nickname: "Kuba",
+    secondary: "libero",
+    error: "secondary_without_primary",
+  },
+  {
+    label: "Server error: secondary equals primary",
+    nickname: "Kuba",
+    primary: "setter",
+    error: "secondary_equals_primary",
+  },
+  { label: "Server error: invalid position", nickname: "Kuba", error: "invalid_position" },
   { label: "Server error: save failed", nickname: "Kuba", error: "save_failed" },
   { label: "Longest accepted nickname", nickname: "x".repeat(NICKNAME_MAX) },
 ];
@@ -42,6 +65,9 @@ const states: { label: string; nickname: string; error?: string | null; saved?: 
           </a>
           <a class="text-foreground underline underline-offset-4" href="/dev/training-kitchen-sink">
             Training sink
+          </a>
+          <a class="text-foreground underline underline-offset-4" href="/dev/organizer-ratings-kitchen-sink">
+            Ratings sink
           </a>
         </nav>
       </header>
@@ -67,6 +93,8 @@ const states: { label: string; nickname: string; error?: string | null; saved?: 
                 )}
                 <ProfileForm
                   initialNickname={state.nickname}
+                  initialPrimary={state.primary ?? null}
+                  initialSecondary={state.secondary ?? null}
                   serverError={profileErrorMessage(state.error ?? null)}
                   client:load
                 />

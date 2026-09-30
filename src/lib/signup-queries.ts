@@ -1,6 +1,7 @@
 import type { AstroCookies } from "astro";
 import { createClient } from "@/lib/supabase";
 import { PROFILE_COLUMNS, type Profile } from "@/lib/profiles";
+import { RATING_DEFAULT } from "@/lib/ratings";
 import type { SignupEntry } from "@/lib/signups";
 import { isUuid } from "@/lib/trainings";
 
@@ -44,6 +45,47 @@ export async function loadRoster(trainingId: string, headers: Headers, cookies: 
     nickname: row.profiles.nickname,
   }));
   return { entries, failed: false };
+}
+
+export interface TrainingRatingsLoad {
+  // Keyed by user_id; a player with no row is absent and treated as RATING_DEFAULT by callers.
+  ratings: Map<string, number>;
+  failed: boolean;
+}
+
+// Loads a training's ratings, first guaranteeing a default-5 row for every main-list player, so a
+// player who was on the main list of a played training always has a rating row (organizer's choice
+// 2026-09-30). ON CONFLICT DO NOTHING (ignoreDuplicates) touches no existing row and needs only the
+// INSERT grant, so it's safe under concurrent organizers and never overwrites a real rating. Only
+// ever called from the organizer training page (ORGANIZER_ROUTES-gated) for a ratable training
+// (canRateTraining); the page passes its current main-list user_ids. `numeric` can arrive as a
+// string over PostgREST, so Number() normalises it.
+export async function loadOrSeedTrainingRatings(
+  trainingId: string,
+  mainUserIds: string[],
+  headers: Headers,
+  cookies: AstroCookies,
+): Promise<TrainingRatingsLoad> {
+  if (!isUuid(trainingId)) return { ratings: new Map(), failed: false };
+  const supabase = createClient(headers, cookies);
+  if (!supabase) return { ratings: new Map(), failed: true };
+
+  if (mainUserIds.length > 0) {
+    const { error: seedError } = await supabase.from("training_ratings").upsert(
+      mainUserIds.map((userId) => ({ training_id: trainingId, user_id: userId, rating: RATING_DEFAULT })),
+      { onConflict: "training_id,user_id", ignoreDuplicates: true },
+    );
+    if (seedError) return { ratings: new Map(), failed: true };
+  }
+
+  const { data, error } = await supabase
+    .from("training_ratings")
+    .select("user_id, rating")
+    .eq("training_id", trainingId)
+    .overrideTypes<{ user_id: string; rating: number | string }[], { merge: false }>();
+
+  if (error) return { ratings: new Map(), failed: true };
+  return { ratings: new Map(data.map((row) => [row.user_id, Number(row.rating)])), failed: false };
 }
 
 export interface ProfileLoad {
