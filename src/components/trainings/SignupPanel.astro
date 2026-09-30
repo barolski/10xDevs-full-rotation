@@ -14,7 +14,7 @@ import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { freeMainSlots, MAIN_LIST_SIZE, signupErrorMessage, type Placement, type Roster } from "@/lib/signups";
-import type { Training } from "@/lib/trainings";
+import { canWithdraw, type Training } from "@/lib/trainings";
 
 interface Props {
   training: Training;
@@ -35,6 +35,13 @@ const errorMessage = signupErrorMessage(error);
 const noticeMessage =
   notice === "signed_up" ? "You're signed up." : notice === "withdrawn" ? "You've withdrawn your sign-up." : null;
 const free = freeMainSlots(roster);
+
+// Withdrawal outlives the sign-up window: a confirmed training accepts it until it starts, so the
+// first waitlisted player can be promoted (FR-016). Sign up stays gated to `open`. `lateWithdraw` is
+// the confirmed-before-start case, where the action carries a warning that it may count as an absence.
+const showWithdraw = placement !== null && canWithdraw(training, now);
+const showSignup = placement === null && open;
+const lateWithdraw = showWithdraw && !open;
 ---
 
 <div class="@container space-y-4">
@@ -83,19 +90,25 @@ const free = freeMainSlots(roster);
             </p>
           )}
 
-          {open && (
-            <form method="POST" action={`/api/trainings/${training.id}/${placement ? "withdraw" : "signup"}`}>
-              {placement ? (
-                <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
-                  <LogOut aria-hidden="true" />
-                  Withdraw
-                </button>
-              ) : (
-                <button type="submit" class:list={[cn(buttonVariants(), "w-full")]}>
-                  <LogIn aria-hidden="true" />
-                  Sign up
-                </button>
+          {showWithdraw && (
+            <form method="POST" action={`/api/trainings/${training.id}/withdraw`} class="space-y-2">
+              <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
+                <LogOut aria-hidden="true" />
+                Withdraw
+              </button>
+              {lateWithdraw && (
+                <p class="text-muted-foreground text-xs">
+                  Sign-ups are closed. Withdrawing now may count as an absence.
+                </p>
               )}
+            </form>
+          )}
+          {showSignup && (
+            <form method="POST" action={`/api/trainings/${training.id}/signup`}>
+              <button type="submit" class:list={[cn(buttonVariants(), "w-full")]}>
+                <LogIn aria-hidden="true" />
+                Sign up
+              </button>
             </form>
           )}
         </div>
