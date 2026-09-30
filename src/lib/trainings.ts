@@ -31,6 +31,16 @@ export function isSignupOpen(startsAt: Date, now: Date): boolean {
   return signupClosesAt(startsAt).getTime() > now.getTime();
 }
 
+// When a player may withdraw their sign-up. Shared by the withdraw API route and the player panel so
+// the gate cannot drift between them (like isSignupOpen). Allowed while sign-ups are open, or on a
+// confirmed training before it starts: a late withdrawal frees a slot and promotes the first
+// waitlisted player (FR-016). Deliberately closed during `finalizing` (status still `open` but the
+// outcome is undecided), on a cancelled training, and after the training has started.
+export function canWithdraw(training: Pick<Training, "starts_at" | "status">, now: Date): boolean {
+  const startsAt = new Date(training.starts_at);
+  return isSignupOpen(startsAt, now) || (training.status === "confirmed" && startsAt.getTime() > now.getTime());
+}
+
 // What a view shows. `finalizing` is not a stored status: it is the gap between sign-ups closing
 // (starts_at - 3h) and the next cron tick writing the outcome, during which the row is still `open`
 // though sign-ups are already closed. Every other value maps straight to the stored status.
