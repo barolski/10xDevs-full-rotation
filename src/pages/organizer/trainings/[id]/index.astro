@@ -11,11 +11,13 @@ import TrainingRatingInput from "@/components/trainings/TrainingRatingInput";
 import AttendanceToggle from "@/components/trainings/AttendanceToggle";
 import TeamsPanel from "@/components/trainings/TeamsPanel.astro";
 import { loadTraining, unavailableTraining } from "@/lib/training-queries";
-import { loadRoster, loadOrSeedTrainingRatings } from "@/lib/signup-queries";
+import { loadRoster, loadOrSeedTrainingRatings, loadRosterStatus } from "@/lib/signup-queries";
 import { loadAttendance } from "@/lib/attendance-queries";
 import { type AttendanceStatus } from "@/lib/attendance";
 import { loadTeams } from "@/lib/team-queries";
 import { MIN_CONFIRMED, splitRoster, type Roster } from "@/lib/signups";
+import type { RosterStatus } from "@/lib/roster-status";
+import RosterStatusPanel from "@/components/trainings/RosterStatusPanel.astro";
 import { rosterLabel } from "@/lib/profiles";
 import type { AssignedPlayer } from "@/lib/teams";
 import {
@@ -68,12 +70,24 @@ let ratings = new Map<string, number>();
 // Attendance (S-07): marks for the main list of a played training, same window as ratings.
 let attendanceFailed = false;
 let attendanceMarks = new Map<string, AttendanceStatus>();
+// Roster status (S-08, FR-011): the four buckets, shown for every training status. It is handed the
+// sign-up read below instead of repeating it, so the header count and the Roster lists can never
+// disagree; only the profile pool and the organizer-only blocked lookup load on top, and a failure
+// of those cannot hide attendance or ratings.
+let rosterStatus: RosterStatus | null = null;
+let rosterStatusFailed = false;
 if (training) {
   const rosterLoad = await loadRoster(training.id, Astro.request.headers, Astro.cookies);
   rosterFailed = rosterLoad.failed;
+  rosterStatusFailed = rosterLoad.failed;
   if (!rosterLoad.failed) {
     roster = splitRoster(rosterLoad.entries);
     mainCount = roster.main.length;
+
+    const statusLoad = await loadRosterStatus(training.id, rosterLoad.entries, Astro.request.headers, Astro.cookies);
+    rosterStatusFailed = statusLoad.failed;
+    rosterStatus = statusLoad.status;
+
     if (ratable) {
       const ratingLoad = await loadOrSeedTrainingRatings(
         training.id,
@@ -151,6 +165,7 @@ const notice = Astro.url.searchParams.has("created")
                 <h2 class="text-sm font-medium">Sign-up link</h2>
                 <CopyLinkButton url={shareUrl} client:load />
               </section>
+              <RosterStatusPanel status={rosterStatus} failed={rosterStatusFailed} />
               {ratable && (
                 <section class="space-y-3">
                   <h2 class="text-sm font-medium">Attendance</h2>
