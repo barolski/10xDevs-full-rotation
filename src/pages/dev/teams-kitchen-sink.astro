@@ -1,0 +1,126 @@
+---
+// Dev-only visual gate for the S-06 team split: every state of TeamsPanel (and the
+// GenerateTeamsButton refusal) on one page, rendered through the same components the organizer
+// page ships. Theme is forced for the whole page (?theme=light|dark). Teams are fed from static
+// fixtures, so no DB is needed; the embedded buttons POST to a dummy id and are here for layout.
+import Layout from "@/layouts/Layout.astro";
+import TeamsPanel from "@/components/trainings/TeamsPanel.astro";
+import GenerateTeamsButton from "@/components/trainings/GenerateTeamsButton";
+import { teamsErrorMessage, type AssignedPlayer, type TeamId } from "@/lib/teams";
+import type { PlayerPosition } from "@/lib/profiles";
+
+// Production: empty 404. No frontmatter `return` here; it crashes typescript-eslint on .astro files.
+const isDev = import.meta.env.DEV;
+if (!isDev) {
+  Astro.response.status = 404;
+}
+
+const theme = Astro.url.searchParams.get("theme") === "dark" ? "dark" : "light";
+const TRAINING_ID = "00000000-0000-0000-0000-000000000001";
+
+interface Fixture {
+  nickname: string;
+  rating: number;
+  team: TeamId;
+  primary: PlayerPosition | null;
+  sub?: boolean;
+}
+
+const toAssigned = (list: Fixture[]): AssignedPlayer[] =>
+  list.map((fixture, index) => ({
+    user_id: `00000000-0000-0000-0000-${String(index + 1).padStart(12, "0")}`,
+    nickname: fixture.nickname,
+    position: index + 1,
+    rating: fixture.rating,
+    primaryPosition: fixture.primary,
+    secondaryPosition: null,
+    team: fixture.team,
+    isSubstituteSetter: fixture.sub ?? false,
+  }));
+
+// Even roster (12): 6/6, each team a real setter, averages close.
+const even = toAssigned([
+  { nickname: "Ala", rating: 7, team: "A", primary: "setter" },
+  { nickname: "Nina", rating: 6.5, team: "A", primary: "middle" },
+  { nickname: "Ola", rating: 6, team: "A", primary: "outside" },
+  { nickname: "Zofia", rating: 5.5, team: "A", primary: "outside" },
+  { nickname: "Lena", rating: 5, team: "A", primary: "opposite" },
+  { nickname: "Kaja", rating: 4.5, team: "A", primary: "middle" },
+  { nickname: "Jan", rating: 6.5, team: "B", primary: "setter" },
+  { nickname: "Marek", rating: 6, team: "B", primary: "outside" },
+  { nickname: "Piotr", rating: 5.5, team: "B", primary: "outside" },
+  { nickname: "Kuba", rating: 5.5, team: "B", primary: "middle" },
+  { nickname: "Adam", rating: 5, team: "B", primary: "middle" },
+  { nickname: "Igor", rating: 5, team: "B", primary: "opposite" },
+]);
+
+// Odd roster (11): 6/5.
+const odd = even.filter((player) => player.nickname !== "Igor");
+
+// Too few setters: Team A has no real setter, so its highest-rated player is a substitute setter.
+const withSubstitute = toAssigned([
+  { nickname: "Ala", rating: 7, team: "A", primary: "outside", sub: true },
+  { nickname: "Nina", rating: 6, team: "A", primary: "middle" },
+  { nickname: "Ola", rating: 5.5, team: "A", primary: "outside" },
+  { nickname: "Lena", rating: 5, team: "A", primary: "opposite" },
+  { nickname: "Jan", rating: 6.5, team: "B", primary: "setter" },
+  { nickname: "Marek", rating: 6, team: "B", primary: "outside" },
+  { nickname: "Kuba", rating: 5.5, team: "B", primary: "middle" },
+  { nickname: "Adam", rating: 5, team: "B", primary: "middle" },
+]);
+
+const states: { label: string; assignments: AssignedPlayer[]; failed: boolean }[] = [
+  { label: "Not generated", assignments: [], failed: false },
+  { label: "Generated — even (6/6)", assignments: even, failed: false },
+  { label: "Generated — odd (6/5)", assignments: odd, failed: false },
+  { label: "Substitute setter", assignments: withSubstitute, failed: false },
+  { label: "Load failed", assignments: [], failed: true },
+];
+
+const refusalMessage = teamsErrorMessage("threshold_unmet", 1.3) ?? undefined;
+---
+
+{isDev && (
+  <Layout title="Kitchen sink: teams" theme={theme}>
+    <main class="flex-1 space-y-8 p-4 sm:p-8">
+      <header class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-2xl font-semibold">Teams kitchen sink ({theme})</h1>
+        <nav class="text-muted-foreground flex gap-3 text-sm">
+          <a class="text-foreground underline underline-offset-4" href="?theme=light">
+            Light
+          </a>
+          <a class="text-foreground underline underline-offset-4" href="?theme=dark">
+            Dark
+          </a>
+          <a class="text-foreground underline underline-offset-4" href="/dev/organizer-ratings-kitchen-sink">
+            Ratings sink
+          </a>
+        </nav>
+      </header>
+
+      <div class="grid items-start gap-6 md:grid-cols-2">
+        {states.map((state) => (
+          <section class="space-y-2">
+            <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">{state.label}</h2>
+            <div class="rounded-xl border p-4">
+              <TeamsPanel trainingId={TRAINING_ID} assignments={state.assignments} failed={state.failed} />
+            </div>
+          </section>
+        ))}
+
+        <section class="space-y-2">
+          <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Refused (threshold unmet)</h2>
+          <div class="flex justify-end rounded-xl border p-4">
+            <GenerateTeamsButton
+              trainingId={TRAINING_ID}
+              hasExistingTeams={false}
+              seedStatus="error"
+              seedMessage={refusalMessage}
+              client:load
+            />
+          </div>
+        </section>
+      </div>
+    </main>
+  </Layout>
+)}
