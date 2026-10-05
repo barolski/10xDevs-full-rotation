@@ -22,7 +22,12 @@ export const POST: APIRoute = async (context) => {
   // so the gate can't live only in the page UI.
   if (!canGenerateTeams(training)) return bad("not_generatable", 409);
 
-  const { players, failed: playersFailed } = await loadTeamPlayers(id, context.request.headers, context.cookies);
+  const { players, failed: playersFailed } = await loadTeamPlayers(
+    id,
+    training.starts_at,
+    context.request.headers,
+    context.cookies,
+  );
   if (playersFailed) return bad("save_failed", 500);
 
   const result = generateTeams(players);

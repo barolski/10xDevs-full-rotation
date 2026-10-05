@@ -2,18 +2,54 @@ import type { AstroCookies } from "astro";
 import { createClient } from "@/lib/supabase";
 import { loadRoster } from "@/lib/signup-queries";
 import { splitRoster } from "@/lib/signups";
-import { RATING_DEFAULT } from "@/lib/ratings";
 import type { PlayerPosition } from "@/lib/profiles";
-import type { AssignedPlayer, TeamId, TeamPlayer } from "@/lib/teams";
+import { UNRATED_RATING, type AssignedPlayer, type TeamId, type TeamPlayer } from "@/lib/teams";
 
 // Server-only (reads secrets through createClient): the bridge between the DB and the pure
 // generateTeams() in src/lib/teams.ts, mirroring src/lib/signup-queries.ts. Builds TeamPlayer[]
-// from the confirmed main-list roster joined to ratings and positions, persists a generated
-// split (replace-all), and loads an existing one for display.
+// from the confirmed main-list roster joined to past-average ratings and positions, persists a
+// generated split (replace-all), and loads an existing one for display.
 
-// A numeric rating can arrive from PostgREST as a string, so Number() normalises it (same as
-// loadOrSeedTrainingRatings). A player with no rating row is RATING_DEFAULT — generateTeams never
-// has to reason about "no rating".
+type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
+
+interface PastRatingRow {
+  user_id: string;
+  rating: number | string;
+  // PostgREST embeds the training (training_ratings.training_id -> trainings.id) for its start time.
+  trainings: { starts_at: string };
+}
+
+// Each player's rating for generation is the AVERAGE of their organizer-set ratings over PAST
+// trainings -- those that started before this one. The upcoming training's own ratings are
+// excluded (they don't exist yet and must not feed its own split). A player with no past rating is
+// absent from the map and treated as UNRATED_RATING (0) by callers. A numeric can arrive from
+// PostgREST as a string, so Number() normalises it.
+async function loadPastAverageRatings(
+  supabase: SupabaseClient,
+  startsAt: string,
+  userIds: string[],
+): Promise<{ ratingOf: Map<string, number>; failed: boolean }> {
+  if (userIds.length === 0) return { ratingOf: new Map(), failed: false };
+
+  const { data, error } = await supabase
+    .from("training_ratings")
+    .select("user_id, rating, trainings!inner(starts_at)")
+    .in("user_id", userIds)
+    .overrideTypes<PastRatingRow[], { merge: false }>();
+  if (error) return { ratingOf: new Map(), failed: true };
+
+  const currentMs = new Date(startsAt).getTime();
+  const totals = new Map<string, { sum: number; count: number }>();
+  for (const row of data) {
+    if (new Date(row.trainings.starts_at).getTime() >= currentMs) continue; // skip this/future trainings
+    const entry = totals.get(row.user_id) ?? { sum: 0, count: 0 };
+    entry.sum += Number(row.rating);
+    entry.count += 1;
+    totals.set(row.user_id, entry);
+  }
+  return { ratingOf: new Map([...totals].map(([userId, { sum, count }]) => [userId, sum / count])), failed: false };
+}
+
 export interface TeamPlayersLoad {
   players: TeamPlayer[];
   failed: boolean;
@@ -21,6 +57,7 @@ export interface TeamPlayersLoad {
 
 export async function loadTeamPlayers(
   trainingId: string,
+  startsAt: string,
   headers: Headers,
   cookies: AstroCookies,
 ): Promise<TeamPlayersLoad> {
@@ -33,13 +70,8 @@ export async function loadTeamPlayers(
   if (!supabase) return { players: [], failed: true };
   const userIds = main.map((entry) => entry.user_id);
 
-  const { data: ratingRows, error: ratingError } = await supabase
-    .from("training_ratings")
-    .select("user_id, rating")
-    .eq("training_id", trainingId)
-    .overrideTypes<{ user_id: string; rating: number | string }[], { merge: false }>();
-  if (ratingError) return { players: [], failed: true };
-  const ratingOf = new Map(ratingRows.map((row) => [row.user_id, Number(row.rating)]));
+  const { ratingOf, failed: ratingFailed } = await loadPastAverageRatings(supabase, startsAt, userIds);
+  if (ratingFailed) return { players: [], failed: true };
 
   const { data: profileRows, error: profileError } = await supabase
     .from("profiles")
@@ -60,7 +92,7 @@ export async function loadTeamPlayers(
       user_id: entry.user_id,
       nickname: entry.nickname,
       position: entry.position,
-      rating: ratingOf.get(entry.user_id) ?? RATING_DEFAULT,
+      rating: ratingOf.get(entry.user_id) ?? UNRATED_RATING,
       primaryPosition: positions?.primary ?? null,
       secondaryPosition: positions?.secondary ?? null,
     };
@@ -110,7 +142,12 @@ export interface TeamsLoad {
   failed: boolean;
 }
 
-export async function loadTeams(trainingId: string, headers: Headers, cookies: AstroCookies): Promise<TeamsLoad> {
+export async function loadTeams(
+  trainingId: string,
+  startsAt: string,
+  headers: Headers,
+  cookies: AstroCookies,
+): Promise<TeamsLoad> {
   const supabase = createClient(headers, cookies);
   if (!supabase) return { assignments: [], failed: true };
 
@@ -122,13 +159,13 @@ export async function loadTeams(trainingId: string, headers: Headers, cookies: A
   if (error) return { assignments: [], failed: true };
   if (data.length === 0) return { assignments: [], failed: false };
 
-  const { data: ratingRows, error: ratingError } = await supabase
-    .from("training_ratings")
-    .select("user_id, rating")
-    .eq("training_id", trainingId)
-    .overrideTypes<{ user_id: string; rating: number | string }[], { merge: false }>();
-  if (ratingError) return { assignments: [], failed: true };
-  const ratingOf = new Map(ratingRows.map((row) => [row.user_id, Number(row.rating)]));
+  // Show the same rating the split was balanced on: the player's past-training average (0 if none).
+  const { ratingOf, failed: ratingFailed } = await loadPastAverageRatings(
+    supabase,
+    startsAt,
+    data.map((row) => row.user_id),
+  );
+  if (ratingFailed) return { assignments: [], failed: true };
 
   // Sign-up position drives the deterministic tie-break, same as generation.
   const { entries, failed: rosterFailed } = await loadRoster(trainingId, headers, cookies);
@@ -139,7 +176,7 @@ export async function loadTeams(trainingId: string, headers: Headers, cookies: A
     user_id: row.user_id,
     nickname: row.profiles.nickname,
     position: positionOf.get(row.user_id) ?? 0,
-    rating: ratingOf.get(row.user_id) ?? RATING_DEFAULT,
+    rating: ratingOf.get(row.user_id) ?? UNRATED_RATING,
     primaryPosition: row.profiles.primary_position,
     secondaryPosition: row.profiles.secondary_position,
     team: row.team,

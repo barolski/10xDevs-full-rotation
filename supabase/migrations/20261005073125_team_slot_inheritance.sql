@@ -67,7 +67,8 @@ begin
 
   -- Setter guarantee for the affected team: if it now has no setter at all -- neither a real one
   -- (profile primary/secondary = 'setter') nor a substitute -- flag its highest-rated remaining
-  -- member as a substitute setter (FR-018). A missing rating counts as 5; position breaks ties.
+  -- member as a substitute setter (FR-018). "Rating" is the player's average over PAST trainings
+  -- (same as generation); a player with no past rating counts as 0, and position breaks ties.
   if exists (
        select 1 from public.team_assignments ta
        where ta.training_id = new.training_id and ta.team = v_team
@@ -85,12 +86,16 @@ begin
     where training_id = new.training_id and user_id = (
       select ta.user_id
       from public.team_assignments ta
-      left join public.training_ratings tr
-        on tr.training_id = new.training_id and tr.user_id = ta.user_id
       join public.signups s
         on s.training_id = new.training_id and s.user_id = ta.user_id
       where ta.training_id = new.training_id and ta.team = v_team
-      order by coalesce(tr.rating, 5) desc, s.position asc
+      order by (
+        select coalesce(avg(tr.rating), 0)
+        from public.training_ratings tr
+        join public.trainings t2 on t2.id = tr.training_id
+        where tr.user_id = ta.user_id
+          and t2.starts_at < (select t3.starts_at from public.trainings t3 where t3.id = new.training_id)
+      ) desc, s.position asc
       limit 1
     );
   end if;

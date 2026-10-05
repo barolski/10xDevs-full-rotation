@@ -84,7 +84,7 @@ if (training) {
 let teamAssignments: AssignedPlayer[] = [];
 let teamsFailed = false;
 if (training && canGenerate) {
-  const teamsLoad = await loadTeams(training.id, Astro.request.headers, Astro.cookies);
+  const teamsLoad = await loadTeams(training.id, training.starts_at, Astro.request.headers, Astro.cookies);
   teamsFailed = teamsLoad.failed;
   teamAssignments = teamsLoad.assignments;
 }

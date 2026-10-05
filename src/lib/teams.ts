@@ -1,8 +1,10 @@
 // Team generation rules shared by the organizer teams island, its API route and the
 // kitchen-sink. Browser-safe on purpose: no Supabase import, so the island bundles no
 // secrets (mirrors src/lib/ratings.ts vs src/lib/team-queries.ts). The server seam feeds
-// this a ready TeamPlayer[] (ratings already resolved, a missing one defaulted to 5), so
-// the algorithm here is pure and deterministic -- no I/O, no "no rating" branch.
+// this a ready TeamPlayer[] whose `rating` is the AVERAGE of the player's PAST-training
+// ratings -- the upcoming training's own ratings are never used (they don't exist yet and
+// must not feed its own split), and a player with no past rating is UNRATED_RATING (0). The
+// algorithm here is pure and deterministic -- no I/O, no "no rating" branch.
 
 import type { PlayerPosition } from "@/lib/profiles";
 
@@ -17,8 +19,12 @@ export const TEAM_LABELS: Record<TeamId, string> = {
 
 // Teams are balanced on AVERAGE rating, not sum: with an odd roster (e.g. 6 vs 5) the
 // larger team always carries a higher sum, so a sum threshold would almost always refuse.
-// The average is size-independent. 0.5 on the 1-10 scale is one half-step of slack.
+// The average is size-independent. 0.5 of slack on the rating scale.
 export const TEAM_AVG_DIFF_MAX = 0.5;
+
+// A player with no past-training rating counts as 0 for generation (an unrated newcomer is the
+// lowest, not a middle). Distinct from RATING_DEFAULT (5), which is the rating UI's seed value.
+export const UNRATED_RATING = 0;
 
 // Float guard: averages of half-step ratings can drift a hair; compare with an epsilon.
 const EPSILON = 1e-9;
