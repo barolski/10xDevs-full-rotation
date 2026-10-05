@@ -282,7 +282,7 @@ export type TeamsErrorCode = "threshold_unmet" | "not_generatable" | "invalid_re
 
 const MESSAGES: Record<TeamsErrorCode, string> = {
   threshold_unmet: `Couldn't balance the teams within the ${TEAM_AVG_DIFF_MAX} average-rating limit`,
-  not_generatable: "Teams can be generated only once the training is confirmed",
+  not_generatable: "Teams can be generated only before a confirmed training starts",
   invalid_request: "Something went wrong. Please try again.",
   not_found: "That training no longer exists",
   save_failed: "Could not save the teams. Please try again.",

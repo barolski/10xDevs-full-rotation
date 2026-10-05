@@ -47,8 +47,10 @@ const StatusIcon = display ? STATUS_ICON[display] : null;
 // A rating is a post-training assessment (see canRateTraining): only a confirmed training that has
 // already started is ratable, and only its main-list players — the waitlist did not play.
 const ratable = training ? canRateTraining(training, now) : false;
-// Teams can be generated once the training is confirmed (S-06); the section is hidden otherwise.
-const canGenerate = training ? canGenerateTeams(training) : false;
+// The Teams section shows for any confirmed training (so a played session still displays its
+// split), but generating/regenerating is offered only before the session starts (S-06).
+const showTeams = training?.status === "confirmed";
+const canGenerate = training ? canGenerateTeams(training, now) : false;
 
 // Main-list count against the minimum, so the organizer sees why it confirmed or cancelled (and,
 // while open, live progress toward the minimum). Organizers can read all active sign-ups via RLS.
@@ -83,7 +85,7 @@ if (training) {
 // Generation itself happens via the island's POST to the teams route, which reloads this page.
 let teamAssignments: AssignedPlayer[] = [];
 let teamsFailed = false;
-if (training && canGenerate) {
+if (training && showTeams) {
   const teamsLoad = await loadTeams(training.id, training.starts_at, Astro.request.headers, Astro.cookies);
   teamsFailed = teamsLoad.failed;
   teamAssignments = teamsLoad.assignments;
@@ -169,8 +171,13 @@ const notice = Astro.url.searchParams.has("created")
                   </ul>
                 )}
               </section>
-              {canGenerate && (
-                <TeamsPanel trainingId={training.id} assignments={teamAssignments} failed={teamsFailed} />
+              {showTeams && (
+                <TeamsPanel
+                  trainingId={training.id}
+                  assignments={teamAssignments}
+                  failed={teamsFailed}
+                  canGenerate={canGenerate}
+                />
               )}
             </CardContent>
             <CardFooter className="gap-3">

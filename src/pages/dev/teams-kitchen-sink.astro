@@ -69,12 +69,14 @@ const withSubstitute = toAssigned([
   { nickname: "Adam", rating: 5, team: "B", primary: "middle" },
 ]);
 
-const states: { label: string; assignments: AssignedPlayer[]; failed: boolean }[] = [
-  { label: "Not generated", assignments: [], failed: false },
-  { label: "Generated — even (6/6)", assignments: even, failed: false },
-  { label: "Generated — odd (6/5)", assignments: odd, failed: false },
-  { label: "Substitute setter", assignments: withSubstitute, failed: false },
-  { label: "Load failed", assignments: [], failed: true },
+const states: { label: string; assignments: AssignedPlayer[]; failed: boolean; canGenerate: boolean }[] = [
+  { label: "Not generated", assignments: [], failed: false, canGenerate: true },
+  { label: "Generated — even (6/6)", assignments: even, failed: false, canGenerate: true },
+  { label: "Generated — odd (6/5)", assignments: odd, failed: false, canGenerate: true },
+  { label: "Substitute setter", assignments: withSubstitute, failed: false, canGenerate: true },
+  { label: "Load failed", assignments: [], failed: true, canGenerate: true },
+  // Played session: teams shown read-only, no generate/regenerate button.
+  { label: "Played — read-only", assignments: even, failed: false, canGenerate: false },
 ];
 
 const refusalMessage = teamsErrorMessage("threshold_unmet", 1.3) ?? undefined;
@@ -103,7 +105,12 @@ const refusalMessage = teamsErrorMessage("threshold_unmet", 1.3) ?? undefined;
           <section class="space-y-2">
             <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">{state.label}</h2>
             <div class="rounded-xl border p-4">
-              <TeamsPanel trainingId={TRAINING_ID} assignments={state.assignments} failed={state.failed} />
+              <TeamsPanel
+                trainingId={TRAINING_ID}
+                assignments={state.assignments}
+                failed={state.failed}
+                canGenerate={state.canGenerate}
+              />
             </div>
           </section>
         ))}

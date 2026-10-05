@@ -11,10 +11,16 @@ interface Props {
   trainingId: string;
   assignments: AssignedPlayer[];
   failed: boolean;
+  // Whether generating/regenerating is offered (confirmed + not yet started). After the session
+  // the split is shown read-only: regenerating a played training is pointless.
+  canGenerate: boolean;
 }
 
-const { trainingId, assignments, failed } = Astro.props;
+const { trainingId, assignments, failed, canGenerate } = Astro.props;
 const hasTeams = assignments.length > 0;
+const emptyNote = canGenerate
+  ? "No teams yet — generate them from the confirmed roster."
+  : "No teams were generated for this session.";
 
 const membersOf = (team: TeamId) => assignments.filter((player) => player.team === team);
 const averageOf = (members: AssignedPlayer[]) =>
@@ -26,7 +32,7 @@ const averageOf = (members: AssignedPlayer[]) =>
 <section class="space-y-3">
   <div class="flex flex-wrap items-center justify-between gap-2">
     <h2 class="text-sm font-medium">Teams</h2>
-    <GenerateTeamsButton trainingId={trainingId} hasExistingTeams={hasTeams} client:load />
+    {canGenerate && <GenerateTeamsButton trainingId={trainingId} hasExistingTeams={hasTeams} client:load />}
   </div>
 
   {failed ? (
@@ -34,7 +40,7 @@ const averageOf = (members: AssignedPlayer[]) =>
       <AlertDescription>Could not load teams. Please refresh the page.</AlertDescription>
     </Alert>
   ) : !hasTeams ? (
-    <p class="text-muted-foreground text-sm">No teams yet — generate them from the confirmed roster.</p>
+    <p class="text-muted-foreground text-sm">{emptyNote}</p>
   ) : (
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {TEAM_IDS.map((team) => {

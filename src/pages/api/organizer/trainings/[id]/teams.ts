@@ -18,9 +18,9 @@ export const POST: APIRoute = async (context) => {
   const { training, failed: trainingFailed } = await loadTraining(id, context.request.headers, context.cookies);
   if (trainingFailed) return bad("save_failed", 500);
   if (!training) return bad("not_found", 400);
-  // Teams can be generated only once the training is confirmed; this route is directly callable,
-  // so the gate can't live only in the page UI.
-  if (!canGenerateTeams(training)) return bad("not_generatable", 409);
+  // Teams can be generated only on a confirmed training that hasn't started yet; this route is
+  // directly callable, so the gate can't live only in the page UI.
+  if (!canGenerateTeams(training, new Date())) return bad("not_generatable", 409);
 
   const { players, failed: playersFailed } = await loadTeamPlayers(
     id,
