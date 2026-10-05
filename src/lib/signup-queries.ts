@@ -88,6 +88,31 @@ export async function loadOrSeedTrainingRatings(
   return { ratings: new Map(data.map((row) => [row.user_id, Number(row.rating)])), failed: false };
 }
 
+// The player's own no-show lockout status for a training (S-07, FR-010), via the block_info RPC
+// (which reads auth.uid()). Fail-OPEN: on any error treat the player as not blocked — the sign-up
+// trigger is still the hard gate, so a transient read failure must not strand a legitimate player.
+export interface BlockInfo {
+  blocked: boolean;
+  absences: number;
+}
+
+export async function loadBlockInfo(trainingId: string, headers: Headers, cookies: AstroCookies): Promise<BlockInfo> {
+  if (!isUuid(trainingId)) return { blocked: false, absences: 0 };
+  const supabase = createClient(headers, cookies);
+  if (!supabase) return { blocked: false, absences: 0 };
+
+  // block_info is a S-07 RPC the generated types don't know about, so treat the result as unknown
+  // and narrow by hand (same shape as middleware.ts reads is_organizer()). A set-returning function
+  // comes back as an array of rows.
+  const result = await supabase.rpc("block_info", { p_training: trainingId });
+  if (result.error) return { blocked: false, absences: 0 };
+  const data: unknown = result.data;
+  const row: unknown = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== "object") return { blocked: false, absences: 0 };
+  const rec = row as Record<string, unknown>;
+  return { blocked: rec.blocked === true, absences: typeof rec.absences === "number" ? rec.absences : 0 };
+}
+
 export interface ProfileLoad {
   profile: Profile | null;
   failed: boolean;

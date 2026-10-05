@@ -33,6 +33,9 @@ interface Props {
   userId?: string;
   // True when the roster lookup failed, as opposed to nobody having signed up.
   rosterFailed?: boolean;
+  // No-show lockout (S-07): a blocked player sees the reason instead of the sign-up action.
+  blocked?: boolean;
+  absences?: number;
   notice?: "signed_up" | "withdrawn" | null;
   error?: string | null;
 }
@@ -46,6 +49,8 @@ const {
   placement,
   userId,
   rosterFailed = false,
+  blocked = false,
+  absences = 0,
   notice = null,
   error = null,
 } = Astro.props;
@@ -77,6 +82,8 @@ const StatusIcon = display ? STATUS_ICON[display] : null;
           userId={userId}
           open={open}
           failed={rosterFailed}
+          blocked={blocked}
+          absences={absences}
           notice={notice}
           error={error}
         />
