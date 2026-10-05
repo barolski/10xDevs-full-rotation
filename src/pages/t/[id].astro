@@ -2,9 +2,10 @@
 // The link organizers share on WhatsApp. Middleware sends anonymous visitors to sign-in with ?next=.
 import Layout from "@/layouts/Layout.astro";
 import PlayerTrainingCard from "@/components/trainings/PlayerTrainingCard.astro";
-import { loadRoster } from "@/lib/signup-queries";
+import { loadRoster, loadBlockInfo } from "@/lib/signup-queries";
 import { loadTraining, unavailableTraining } from "@/lib/training-queries";
 import { placementOf, splitRoster } from "@/lib/signups";
+import { isSignupOpen } from "@/lib/trainings";
 
 const { isOrganizer, user } = Astro.locals;
 const now = new Date();
@@ -20,6 +21,14 @@ const rosterLoad = training
   : { entries: [], failed: false };
 const roster = splitRoster(rosterLoad.entries);
 const placement = placementOf(roster, user?.id);
+
+// Only a logged-in player who could otherwise sign up (training open, not already placed) needs the
+// lockout check — show the block reason instead of the sign-up button (FR-010). Avoid the RPC otherwise.
+const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
+const block =
+  training && user && open && !placement
+    ? await loadBlockInfo(training.id, Astro.request.headers, Astro.cookies)
+    : { blocked: false, absences: 0 };
 
 const params = Astro.url.searchParams;
 const notice = params.has("signed_up") ? "signed_up" : params.has("withdrawn") ? "withdrawn" : null;
@@ -37,6 +46,8 @@ const notice = params.has("signed_up") ? "signed_up" : params.has("withdrawn") ?
       placement={placement}
       userId={user?.id}
       rosterFailed={rosterLoad.failed}
+      blocked={block.blocked}
+      absences={block.absences}
       notice={notice}
       error={params.get("error")}
     />

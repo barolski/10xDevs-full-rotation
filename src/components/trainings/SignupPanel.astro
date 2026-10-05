@@ -15,6 +15,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { freeMainSlots, MAIN_LIST_SIZE, signupErrorMessage, type Placement, type Roster } from "@/lib/signups";
 import { canWithdraw, type Training } from "@/lib/trainings";
+import { blockReason } from "@/lib/attendance";
 
 interface Props {
   training: Training;
@@ -25,11 +26,26 @@ interface Props {
   open: boolean;
   // True when the roster lookup itself failed: a temporary failure must not read as "nobody signed up".
   failed: boolean;
+  // The no-show lockout (S-07, FR-010): when true, the block reason replaces the sign-up action.
+  blocked?: boolean;
+  absences?: number;
   notice?: "signed_up" | "withdrawn" | null;
   error?: string | null;
 }
 
-const { training, now, roster, placement, userId, open, failed, notice = null, error = null } = Astro.props;
+const {
+  training,
+  now,
+  roster,
+  placement,
+  userId,
+  open,
+  failed,
+  blocked = false,
+  absences = 0,
+  notice = null,
+  error = null,
+} = Astro.props;
 
 const errorMessage = signupErrorMessage(error);
 const noticeMessage =
@@ -40,7 +56,10 @@ const free = freeMainSlots(roster);
 // first waitlisted player can be promoted (FR-016). Sign up stays gated to `open`. `lateWithdraw` is
 // the confirmed-before-start case, where the action carries a warning that it may count as an absence.
 const showWithdraw = placement !== null && canWithdraw(training, now);
-const showSignup = placement === null && open;
+// A blocked player sees the reason instead of the sign-up action (FR-010); the DB trigger is still
+// the hard gate if they POST directly.
+const showSignup = placement === null && open && !blocked;
+const showBlocked = placement === null && open && blocked;
 const lateWithdraw = showWithdraw && !open;
 ---
 
@@ -110,6 +129,11 @@ const lateWithdraw = showWithdraw && !open;
                 Sign up
               </button>
             </form>
+          )}
+          {showBlocked && (
+            <p role="alert" class="bg-warning-soft text-warning-strong rounded-md px-3 py-2 text-sm">
+              {blockReason(absences)}
+            </p>
           )}
         </div>
       )}
