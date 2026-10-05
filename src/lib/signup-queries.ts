@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase";
 import { PROFILE_COLUMNS, type Profile } from "@/lib/profiles";
 import { RATING_DEFAULT } from "@/lib/ratings";
 import type { SignupEntry } from "@/lib/signups";
+import { rosterStatus, type RosterPoolEntry, type RosterStatus } from "@/lib/roster-status";
 import { isUuid } from "@/lib/trainings";
 
 // Server-only (reads secrets through createClient): keep it out of src/lib/signups.ts and
@@ -148,4 +149,49 @@ export async function loadProfile(
 
   if (error) return { profile: null, failed: true };
   return { profile: data, failed: false };
+}
+
+export interface RosterStatusLoad {
+  status: RosterStatus | null;
+  // True when any of the three reads failed. Partial buckets would misstate who is blocked, so one
+  // failure fails the whole roster rather than rendering some lists.
+  failed: boolean;
+}
+
+// The organizer's full roster for one training (S-08, FR-011): every profile, the active sign-ups
+// and the blocked set, composed by rosterStatus(). Organizer-only: the training_blocked_players RPC
+// raises 42501 for anyone else, which lands here as a failed load, never as "nobody is blocked".
+export async function loadRosterStatus(
+  trainingId: string,
+  headers: Headers,
+  cookies: AstroCookies,
+): Promise<RosterStatusLoad> {
+  if (!isUuid(trainingId)) return { status: null, failed: false };
+  const supabase = createClient(headers, cookies);
+  if (!supabase) return { status: null, failed: true };
+
+  const roster = await loadRoster(trainingId, headers, cookies);
+  if (roster.failed) return { status: null, failed: true };
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("user_id, nickname")
+    .overrideTypes<RosterPoolEntry[], { merge: false }>();
+  if (profilesError) return { status: null, failed: true };
+
+  // The RPC returns setof uuid, which PostgREST sends as a bare array of strings. The generated types
+  // don't know the function, so the shape is checked by hand rather than trusted.
+  // Same narrowing as loadBlockInfo: the generated types don't know this RPC, so its result is unknown.
+  const result = await supabase.rpc("training_blocked_players", { p_training: trainingId });
+  if (result.error) return { status: null, failed: true };
+
+  const blocked: unknown = result.data;
+  if (!Array.isArray(blocked) || blocked.some((id) => typeof id !== "string")) {
+    return { status: null, failed: true };
+  }
+
+  return {
+    status: rosterStatus(roster.entries, profiles, new Set(blocked as string[])),
+    failed: false,
+  };
 }
