@@ -15,9 +15,9 @@ import { loadRoster, loadOrSeedTrainingRatings, loadRosterStatus } from "@/lib/s
 import { loadAttendance } from "@/lib/attendance-queries";
 import { type AttendanceStatus } from "@/lib/attendance";
 import { loadTeams } from "@/lib/team-queries";
-import { MAIN_LIST_SIZE, MIN_CONFIRMED, splitRoster, type Roster } from "@/lib/signups";
+import { MIN_CONFIRMED, splitRoster, type Roster } from "@/lib/signups";
 import type { RosterStatus } from "@/lib/roster-status";
-import RosterList from "@/components/trainings/RosterList.astro";
+import RosterStatusPanel from "@/components/trainings/RosterStatusPanel.astro";
 import { rosterLabel } from "@/lib/profiles";
 import type { AssignedPlayer } from "@/lib/teams";
 import {
@@ -163,41 +163,7 @@ const notice = Astro.url.searchParams.has("created")
                 <h2 class="text-sm font-medium">Sign-up link</h2>
                 <CopyLinkButton url={shareUrl} client:load />
               </section>
-              <section class="space-y-3">
-                <h2 class="text-sm font-medium">Roster</h2>
-                {rosterStatusFailed || !rosterStatus ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>
-                      Could not load the roster (main list —, waitlist —, blocked —, no response —). Please refresh the
-                      page.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <div class="space-y-4">
-                    <RosterList
-                      title="Main list"
-                      count={`${rosterStatus.main.length} / ${MAIN_LIST_SIZE}`}
-                      entries={rosterStatus.main}
-                      emptyLabel="No one on the main list yet."
-                    />
-                    <RosterList title="Waitlist" entries={rosterStatus.waitlist} emptyLabel="No one on the waitlist." />
-                    <RosterList
-                      title="Blocked"
-                      count={String(rosterStatus.blocked.length)}
-                      entries={rosterStatus.blocked}
-                      emptyLabel="No one is blocked."
-                      showRank={false}
-                    />
-                    <RosterList
-                      title="No response"
-                      count={String(rosterStatus.noResponse.length)}
-                      entries={rosterStatus.noResponse}
-                      emptyLabel="Everyone has responded."
-                      showRank={false}
-                    />
-                  </div>
-                )}
-              </section>
+              <RosterStatusPanel status={rosterStatus} failed={rosterStatusFailed} />
               {ratable && (
                 <section class="space-y-3">
                   <h2 class="text-sm font-medium">Attendance</h2>
