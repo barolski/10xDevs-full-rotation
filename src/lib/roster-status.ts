@@ -20,7 +20,7 @@ export interface RosterStatus extends Roster {
 // The main list and waitlist come from splitRoster unchanged. Blocked and no-response only apply
 // to players without an active sign-up: the lockout is enforced when a sign-up is inserted, so a
 // signed-up player stays on their list even if the rule would now block them. Both lists are sorted
-// by nickname so the view is stable across reloads.
+// by nickname, with user_id as the tiebreak, so the view is stable across reloads.
 export function rosterStatus(
   entries: SignupEntry[],
   pool: RosterPoolEntry[],
@@ -29,8 +29,11 @@ export function rosterStatus(
   const signedUp = new Set(entries.map((entry) => entry.user_id));
   const unsigned = pool.filter((player) => !signedUp.has(player.user_id));
 
+  // user_id breaks the tie: nicknames are not unique (no constraint on profiles.nickname, and the
+  // profile trigger seeds it from the e-mail local part), and the pool read's row order is not
+  // guaranteed, so without a tiebreak two players sharing a nickname can swap places between reloads.
   const byNickname = (a: RosterPoolEntry, b: RosterPoolEntry) =>
-    a.nickname.localeCompare(b.nickname, undefined, { sensitivity: "base" });
+    a.nickname.localeCompare(b.nickname, undefined, { sensitivity: "base" }) || a.user_id.localeCompare(b.user_id);
 
   return {
     ...splitRoster(entries),

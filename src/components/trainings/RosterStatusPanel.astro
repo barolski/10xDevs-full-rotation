@@ -33,10 +33,10 @@ const { status, failed } = Astro.props;
       />
       <RosterList title="Waitlist" entries={status.waitlist} emptyLabel="No one on the waitlist." />
       <RosterList
-        title="Blocked"
+        title="Blocked (not signed up)"
         count={String(status.blocked.length)}
         entries={status.blocked}
-        emptyLabel="No one is blocked."
+        emptyLabel="No one without a sign-up is blocked."
         showRank={false}
       />
       <RosterList

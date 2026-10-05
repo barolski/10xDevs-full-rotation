@@ -153,16 +153,25 @@ export async function loadProfile(
 
 export interface RosterStatusLoad {
   status: RosterStatus | null;
-  // True when any of the three reads failed. Partial buckets would misstate who is blocked, so one
-  // failure fails the whole roster rather than rendering some lists.
+  // True when either read (the profile pool, the blocked set) failed. Partial buckets would misstate
+  // who is blocked, so one failure fails the whole roster rather than rendering some lists.
   failed: boolean;
 }
+
+// The group is the whole profiles table: there is no membership table, and the PRD has exactly one
+// group that players self-register into (Non-Goals: no multiple groups, no invitations). So every
+// profile counts as a group member for the no-response bucket. The limit is a backstop against that
+// assumption outliving the single-group model, not a page size — the group is ~20 accounts.
+const ROSTER_POOL_LIMIT = 500;
 
 // The organizer's full roster for one training (S-08, FR-011): every profile, the active sign-ups
 // and the blocked set, composed by rosterStatus(). Organizer-only: the training_blocked_players RPC
 // raises 42501 for anyone else, which lands here as a failed load, never as "nobody is blocked".
+// `entries` is the caller's already-loaded active sign-ups (like loadOrSeedTrainingRatings taking
+// mainUserIds): one sign-up read per request, so the header count and these buckets cannot disagree.
 export async function loadRosterStatus(
   trainingId: string,
+  entries: SignupEntry[],
   headers: Headers,
   cookies: AstroCookies,
 ): Promise<RosterStatusLoad> {
@@ -170,12 +179,11 @@ export async function loadRosterStatus(
   const supabase = createClient(headers, cookies);
   if (!supabase) return { status: null, failed: true };
 
-  const roster = await loadRoster(trainingId, headers, cookies);
-  if (roster.failed) return { status: null, failed: true };
-
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
     .select("user_id, nickname")
+    .order("nickname")
+    .limit(ROSTER_POOL_LIMIT)
     .overrideTypes<RosterPoolEntry[], { merge: false }>();
   if (profilesError) return { status: null, failed: true };
 
@@ -191,7 +199,7 @@ export async function loadRosterStatus(
   }
 
   return {
-    status: rosterStatus(roster.entries, profiles, new Set(blocked as string[])),
+    status: rosterStatus(entries, profiles, new Set(blocked as string[])),
     failed: false,
   };
 }

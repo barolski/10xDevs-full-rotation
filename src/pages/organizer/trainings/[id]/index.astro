@@ -70,12 +70,24 @@ let ratings = new Map<string, number>();
 // Attendance (S-07): marks for the main list of a played training, same window as ratings.
 let attendanceFailed = false;
 let attendanceMarks = new Map<string, AttendanceStatus>();
+// Roster status (S-08, FR-011): the four buckets, shown for every training status. It is handed the
+// sign-up read below instead of repeating it, so the header count and the Roster lists can never
+// disagree; only the profile pool and the organizer-only blocked lookup load on top, and a failure
+// of those cannot hide attendance or ratings.
+let rosterStatus: RosterStatus | null = null;
+let rosterStatusFailed = false;
 if (training) {
   const rosterLoad = await loadRoster(training.id, Astro.request.headers, Astro.cookies);
   rosterFailed = rosterLoad.failed;
+  rosterStatusFailed = rosterLoad.failed;
   if (!rosterLoad.failed) {
     roster = splitRoster(rosterLoad.entries);
     mainCount = roster.main.length;
+
+    const statusLoad = await loadRosterStatus(training.id, rosterLoad.entries, Astro.request.headers, Astro.cookies);
+    rosterStatusFailed = statusLoad.failed;
+    rosterStatus = statusLoad.status;
+
     if (ratable) {
       const ratingLoad = await loadOrSeedTrainingRatings(
         training.id,
@@ -91,16 +103,6 @@ if (training) {
       attendanceMarks = attendanceLoad.marks;
     }
   }
-}
-
-// Roster status (S-08, FR-011): loaded separately from the main-list read above, so a failure of the
-// organizer-only blocked lookup cannot hide attendance or ratings. Shown for every training status.
-let rosterStatus: RosterStatus | null = null;
-let rosterStatusFailed = false;
-if (training) {
-  const statusLoad = await loadRosterStatus(training.id, Astro.request.headers, Astro.cookies);
-  rosterStatusFailed = statusLoad.failed;
-  rosterStatus = statusLoad.status;
 }
 
 // Teams (S-06): load the persisted split for the confirmed training so the panel can render it.
