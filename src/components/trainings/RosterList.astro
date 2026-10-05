@@ -5,15 +5,19 @@ import type { SignupEntry } from "@/lib/signups";
 
 interface Props {
   title: string;
-  entries: SignupEntry[];
+  // Only user_id and nickname are rendered, so the roster-status buckets (blocked, no response),
+  // which have no queue position, fit the same list as main and waitlist.
+  entries: Pick<SignupEntry, "user_id" | "nickname">[];
   emptyLabel: string;
   // The signed-in player, marked on their own row.
   highlightUserId?: string;
   // Shown next to the title, e.g. "8/12". Omitted for the waitlist, which has no cap.
   count?: string;
+  // The 1-based queue number on each row. Off for lists without a queue order (blocked, no response).
+  showRank?: boolean;
 }
 
-const { title, entries, emptyLabel, highlightUserId, count } = Astro.props;
+const { title, entries, emptyLabel, highlightUserId, count, showRank = true } = Astro.props;
 ---
 
 <section class="space-y-2">
@@ -38,14 +42,16 @@ const { title, entries, emptyLabel, highlightUserId, count } = Astro.props;
               isMe && "bg-accent text-accent-foreground font-medium",
             ]}
           >
-            <span
-              class:list={[
-                "w-5 text-right text-xs tabular-nums",
-                isMe ? "text-accent-foreground/80" : "text-muted-foreground",
-              ]}
-            >
-              {index + 1}
-            </span>
+            {showRank && (
+              <span
+                class:list={[
+                  "w-5 text-right text-xs tabular-nums",
+                  isMe ? "text-accent-foreground/80" : "text-muted-foreground",
+                ]}
+              >
+                {index + 1}
+              </span>
+            )}
             <span class="min-w-0 break-words">{rosterLabel(entry)}</span>
             {isMe && <span class="ml-auto text-xs font-semibold tracking-wide uppercase">you</span>}
           </li>
