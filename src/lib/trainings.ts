@@ -49,6 +49,15 @@ export function canRateTraining(training: Pick<Training, "status" | "starts_at">
   return training.status === "confirmed" && new Date(training.starts_at).getTime() <= now.getTime();
 }
 
+// When teams may be generated (S-06). Available as soon as the training is confirmed — unlike
+// ratings, this is not gated on the training having started, so the organizer can pre-split the
+// roster ahead of time. Generation reads the confirmed main list; attendance-based filtering is
+// S-07. Shared by the organizer page (which hides the UI) and the teams API route so the gate
+// cannot drift between them (mirrors canRateTraining).
+export function canGenerateTeams(training: Pick<Training, "status">): boolean {
+  return training.status === "confirmed";
+}
+
 // What a view shows. `finalizing` is not a stored status: it is the gap between sign-ups closing
 // (starts_at - 3h) and the next cron tick writing the outcome, during which the row is still `open`
 // though sign-ups are already closed. Every other value maps straight to the stored status.
