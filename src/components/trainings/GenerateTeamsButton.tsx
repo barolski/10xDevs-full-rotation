@@ -31,9 +31,8 @@ export default function GenerateTeamsButton({ trainingId, hasExistingTeams, seed
         const data: unknown = await res.json().catch(() => null);
         const record = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
         const code = record && typeof record.error === "string" ? record.error : null;
-        const exceededBy = record && typeof record.exceededBy === "number" ? record.exceededBy : undefined;
         setStatus("error");
-        setMessage(teamsErrorMessage(code, exceededBy));
+        setMessage(teamsErrorMessage(code));
         return;
       }
       window.location.reload();

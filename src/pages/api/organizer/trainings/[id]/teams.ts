@@ -30,14 +30,18 @@ export const POST: APIRoute = async (context) => {
   );
   if (playersFailed) return bad("save_failed", 500);
 
+  // Generation always produces a split (never refuses); the page surfaces a warning when the
+  // closest split can't meet the average-rating target (FR-020 softened to best-effort).
   const result = generateTeams(players);
-  // FR-020: refuse only when the threshold can't be met, stating by how much. No rows are written.
-  if (!result.ok) {
-    return Response.json({ error: result.code, exceededBy: result.exceededBy }, { status: 409 });
-  }
 
   const { failed: saveFailed } = await saveTeams(id, result.players, context.request.headers, context.cookies);
   if (saveFailed) return bad("save_failed", 500);
 
-  return Response.json({ teams: result.players, averages: result.averages, avgDiff: result.avgDiff });
+  return Response.json({
+    teams: result.players,
+    averages: result.averages,
+    avgDiff: result.avgDiff,
+    balanced: result.balanced,
+    exceededBy: result.exceededBy,
+  });
 };

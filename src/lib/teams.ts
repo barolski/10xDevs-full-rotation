@@ -17,9 +17,10 @@ export const TEAM_LABELS: Record<TeamId, string> = {
   B: "Team B",
 };
 
-// Teams are balanced on AVERAGE rating, not sum: with an odd roster (e.g. 6 vs 5) the
-// larger team always carries a higher sum, so a sum threshold would almost always refuse.
-// The average is size-independent. 0.5 of slack on the rating scale.
+// Teams are balanced on AVERAGE rating, not sum: with an odd roster (e.g. 6 vs 5) the larger team
+// always carries a higher sum, so a sum metric would be unfair. The average is size-independent.
+// This is the TARGET gap (0.5 on the rating scale), not a hard limit -- generation always produces
+// a split and just warns when the closest one overshoots this.
 export const TEAM_AVG_DIFF_MAX = 0.5;
 
 // A player with no past-training rating counts as 0 for generation (an unrated newcomer is the
@@ -46,9 +47,17 @@ export interface AssignedPlayer extends TeamPlayer {
   isSubstituteSetter: boolean;
 }
 
-export type GenerateResult =
-  | { ok: true; players: AssignedPlayer[]; averages: Record<TeamId, number>; avgDiff: number }
-  | { ok: false; code: "threshold_unmet"; exceededBy: number };
+// Generation never refuses: a roster with one ringer and nobody close simply cannot hit the
+// target, and the organizer still wants a split "as is" (decided this session; FR-020 softened
+// from "refuse" to "best-effort + flag"). `balanced` says whether the target was met; when it was
+// not, `exceededBy` is by how much the closest split overshoots, surfaced as a warning on the page.
+export interface GenerateResult {
+  players: AssignedPlayer[];
+  averages: Record<TeamId, number>;
+  avgDiff: number;
+  balanced: boolean;
+  exceededBy: number;
+}
 
 // A player is a setter if either declared position is 'setter' -- FR-018 reads the pair.
 export function isSetter(player: Pick<TeamPlayer, "primaryPosition" | "secondaryPosition">): boolean {
@@ -227,9 +236,9 @@ function round1(value: number): number {
 // Split a confirmed training's roster into two teams (FR-017/FR-018/FR-020), balanced on average
 // rating and -- as a soft secondary goal -- on court positions (so each side resembles a real
 // line-up: a setter, an opposite, two outside hitters, two middles when the roster allows).
-// Deterministic: the same players + ratings + positions always produce the same split. Refuses
-// ONLY when the closest reachable split still exceeds the average-rating threshold; positions
-// never cause a refusal.
+// Deterministic: the same players + ratings + positions always produce the same split. Always
+// returns a split (never refuses); `balanced`/`exceededBy` report whether the average-rating
+// target was met and, if not, by how much the closest split overshoots.
 export function generateTeams(input: TeamPlayer[]): GenerateResult {
   // 1. Seed grouped by role (then rating desc, then sign-up position): the serpentine draft over
   //    this order splits every position evenly and keeps the rating sums close.
@@ -263,25 +272,23 @@ export function generateTeams(input: TeamPlayer[]): GenerateResult {
   }
 
   const diff = avgDiffOf(assigned);
-  if (diff > TEAM_AVG_DIFF_MAX + EPSILON) {
-    return { ok: false, code: "threshold_unmet", exceededBy: round1(diff - TEAM_AVG_DIFF_MAX) };
-  }
+  const balanced = diff <= TEAM_AVG_DIFF_MAX + EPSILON;
 
   return {
-    ok: true,
     players: assigned,
     averages: {
       A: round1(average(teamMembers(assigned, "A"))),
       B: round1(average(teamMembers(assigned, "B"))),
     },
     avgDiff: round1(diff),
+    balanced,
+    exceededBy: balanced ? 0 : round1(diff - TEAM_AVG_DIFF_MAX),
   };
 }
 
-export type TeamsErrorCode = "threshold_unmet" | "not_generatable" | "invalid_request" | "not_found" | "save_failed";
+export type TeamsErrorCode = "not_generatable" | "invalid_request" | "not_found" | "save_failed";
 
 const MESSAGES: Record<TeamsErrorCode, string> = {
-  threshold_unmet: `Couldn't balance the teams within the ${TEAM_AVG_DIFF_MAX} average-rating limit`,
   not_generatable: "Teams can be generated only before a confirmed training starts",
   invalid_request: "Something went wrong. Please try again.",
   not_found: "That training no longer exists",
@@ -289,11 +296,14 @@ const MESSAGES: Record<TeamsErrorCode, string> = {
 };
 
 // Unknown codes get the generic message: the server's error code is never echoed back verbatim.
-// threshold_unmet embeds the exceedance (FR-020: state by how much) when it is known.
-export function teamsErrorMessage(code: string | null, exceededBy?: number): string | null {
+export function teamsErrorMessage(code: string | null): string | null {
   if (!code) return null;
-  if (code === "threshold_unmet" && typeof exceededBy === "number") {
-    return `Couldn't balance the teams: the closest split still exceeds the ${TEAM_AVG_DIFF_MAX} average-rating limit by ${exceededBy}.`;
-  }
   return code in MESSAGES ? MESSAGES[code as TeamsErrorCode] : MESSAGES.save_failed;
+}
+
+// Warning shown on the rendered teams when the split couldn't meet the average-rating target
+// (generation never refuses; FR-020 states by how much it's exceeded). Null when within target.
+export function teamsImbalanceWarning(exceededBy: number): string | null {
+  if (exceededBy <= 0) return null;
+  return `These teams couldn't be balanced within ${TEAM_AVG_DIFF_MAX} — the closest split is off by ${exceededBy}. Shown as-is.`;
 }

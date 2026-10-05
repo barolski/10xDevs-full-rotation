@@ -5,8 +5,7 @@
 // fixtures, so no DB is needed; the embedded buttons POST to a dummy id and are here for layout.
 import Layout from "@/layouts/Layout.astro";
 import TeamsPanel from "@/components/trainings/TeamsPanel.astro";
-import GenerateTeamsButton from "@/components/trainings/GenerateTeamsButton";
-import { teamsErrorMessage, type AssignedPlayer, type TeamId } from "@/lib/teams";
+import { type AssignedPlayer, type TeamId } from "@/lib/teams";
 import type { PlayerPosition } from "@/lib/profiles";
 
 // Production: empty 404. No frontmatter `return` here; it crashes typescript-eslint on .astro files.
@@ -69,6 +68,22 @@ const withSubstitute = toAssigned([
   { nickname: "Adam", rating: 5, team: "B", primary: "middle" },
 ]);
 
+// One side strong, the other weak: no split can meet the target, so a warning shows above the teams.
+const overTarget = toAssigned([
+  { nickname: "Ala", rating: 8, team: "A", primary: "setter" },
+  { nickname: "Ola", rating: 8, team: "A", primary: "outside" },
+  { nickname: "Nina", rating: 8, team: "A", primary: "middle" },
+  { nickname: "Zofia", rating: 7.5, team: "A", primary: "outside" },
+  { nickname: "Lena", rating: 8, team: "A", primary: "opposite" },
+  { nickname: "Kaja", rating: 7.5, team: "A", primary: "middle" },
+  { nickname: "Jan", rating: 4, team: "B", primary: "setter" },
+  { nickname: "Marek", rating: 4, team: "B", primary: "outside" },
+  { nickname: "Piotr", rating: 4.5, team: "B", primary: "outside" },
+  { nickname: "Kuba", rating: 4, team: "B", primary: "middle" },
+  { nickname: "Adam", rating: 4, team: "B", primary: "middle" },
+  { nickname: "Igor", rating: 4.5, team: "B", primary: "opposite" },
+]);
+
 const states: { label: string; assignments: AssignedPlayer[]; failed: boolean; canGenerate: boolean }[] = [
   { label: "Not generated", assignments: [], failed: false, canGenerate: true },
   { label: "Generated — even (6/6)", assignments: even, failed: false, canGenerate: true },
@@ -77,9 +92,9 @@ const states: { label: string; assignments: AssignedPlayer[]; failed: boolean; c
   { label: "Load failed", assignments: [], failed: true, canGenerate: true },
   // Played session: teams shown read-only, no generate/regenerate button.
   { label: "Played — read-only", assignments: even, failed: false, canGenerate: false },
+  // Over the balance target: generation never refuses, so the split shows with a warning.
+  { label: "Over target (best split shown)", assignments: overTarget, failed: false, canGenerate: true },
 ];
-
-const refusalMessage = teamsErrorMessage("threshold_unmet", 1.3) ?? undefined;
 ---
 
 {isDev && (
@@ -114,19 +129,6 @@ const refusalMessage = teamsErrorMessage("threshold_unmet", 1.3) ?? undefined;
             </div>
           </section>
         ))}
-
-        <section class="space-y-2">
-          <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Refused (threshold unmet)</h2>
-          <div class="flex justify-end rounded-xl border p-4">
-            <GenerateTeamsButton
-              trainingId={TRAINING_ID}
-              hasExistingTeams={false}
-              seedStatus="error"
-              seedMessage={refusalMessage}
-              client:load
-            />
-          </div>
-        </section>
       </div>
     </main>
   </Layout>
