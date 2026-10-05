@@ -49,6 +49,17 @@ export function canRateTraining(training: Pick<Training, "status" | "starts_at">
   return training.status === "confirmed" && new Date(training.starts_at).getTime() <= now.getTime();
 }
 
+// When teams may be (re)generated (S-06): a confirmed training that has NOT started yet. Teams are
+// split before the session from the players' PAST-training ratings (team-queries), so generation
+// belongs to the upcoming window; once the session has been played, regenerating is pointless — the
+// teams were already used on court, and the page shows them read-only. (The split is still VIEWABLE
+// after the session; see the page's `showTeams`.) Ratings open on the opposite side of the start
+// line (canRateTraining). Shared by the organizer page and the teams API route so the gate cannot
+// drift between them.
+export function canGenerateTeams(training: Pick<Training, "status" | "starts_at">, now: Date): boolean {
+  return training.status === "confirmed" && new Date(training.starts_at).getTime() > now.getTime();
+}
+
 // What a view shows. `finalizing` is not a stored status: it is the gap between sign-ups closing
 // (starts_at - 3h) and the next cron tick writing the outcome, during which the row is still `open`
 // though sign-ups are already closed. Every other value maps straight to the stored status.

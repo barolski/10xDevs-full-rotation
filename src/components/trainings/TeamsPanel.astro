@@ -1,0 +1,98 @@
+---
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { badgeVariants } from "@/components/ui/badge";
+import GenerateTeamsButton from "@/components/trainings/GenerateTeamsButton";
+import {
+  TEAM_AVG_DIFF_MAX,
+  TEAM_IDS,
+  TEAM_LABELS,
+  isSetter,
+  teamsImbalanceWarning,
+  type AssignedPlayer,
+  type TeamId,
+} from "@/lib/teams";
+import { POSITION_LABELS, rosterLabel } from "@/lib/profiles";
+
+// The organizer-only team split (S-06). Rendered server-side from persisted assignments;
+// GenerateTeamsButton POSTs to the teams route and reloads so this re-renders with the new split.
+interface Props {
+  trainingId: string;
+  assignments: AssignedPlayer[];
+  failed: boolean;
+  // Whether generating/regenerating is offered (confirmed + not yet started). After the session
+  // the split is shown read-only: regenerating a played training is pointless.
+  canGenerate: boolean;
+}
+
+const { trainingId, assignments, failed, canGenerate } = Astro.props;
+const hasTeams = assignments.length > 0;
+const emptyNote = canGenerate
+  ? "No teams yet — generate them from the confirmed roster."
+  : "No teams were generated for this session.";
+
+const membersOf = (team: TeamId) => assignments.filter((player) => player.team === team);
+const averageOf = (members: AssignedPlayer[]) =>
+  members.length === 0
+    ? 0
+    : Math.round((members.reduce((sum, player) => sum + player.rating, 0) / members.length) * 10) / 10;
+
+// Warning when the split overshoots the average-rating target (generation never refuses).
+const avgDiff = hasTeams ? Math.round(Math.abs(averageOf(membersOf("A")) - averageOf(membersOf("B"))) * 10) / 10 : 0;
+const imbalanceWarning = teamsImbalanceWarning(Math.max(0, Math.round((avgDiff - TEAM_AVG_DIFF_MAX) * 10) / 10));
+---
+
+<section class="space-y-3">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <h2 class="text-sm font-medium">Teams</h2>
+    {canGenerate && <GenerateTeamsButton trainingId={trainingId} hasExistingTeams={hasTeams} client:load />}
+  </div>
+
+  {failed ? (
+    <Alert variant="destructive">
+      <AlertDescription>Could not load teams. Please refresh the page.</AlertDescription>
+    </Alert>
+  ) : !hasTeams ? (
+    <p class="text-muted-foreground text-sm">{emptyNote}</p>
+  ) : (
+    <div class="space-y-3">
+      {imbalanceWarning && (
+        <p role="alert" class="bg-warning-soft text-warning-strong rounded-md px-3 py-2 text-xs">
+          {imbalanceWarning}
+        </p>
+      )}
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {TEAM_IDS.map((team) => {
+          const members = membersOf(team);
+          return (
+            <div class="rounded-lg border p-3">
+              <div class="mb-2 flex items-baseline justify-between gap-2">
+                <h3 class="text-sm font-medium">{TEAM_LABELS[team]}</h3>
+                <span class="text-muted-foreground text-xs tabular-nums">avg {averageOf(members)}</span>
+              </div>
+              <ul class="divide-border divide-y">
+                {members.map((player) => (
+                  <li class="flex items-center justify-between gap-2 py-1.5">
+                    <span class="flex min-w-0 flex-col">
+                      <span class="min-w-0 break-words text-sm">{rosterLabel(player)}</span>
+                      {player.primaryPosition && (
+                        <span class="text-muted-foreground text-xs">{POSITION_LABELS[player.primaryPosition]}</span>
+                      )}
+                    </span>
+                    <span class="flex shrink-0 items-center gap-2">
+                      {isSetter(player) ? (
+                        <span class:list={[badgeVariants({ variant: "info" })]}>Setter</span>
+                      ) : player.isSubstituteSetter ? (
+                        <span class:list={[badgeVariants({ variant: "warning" })]}>Substitute setter</span>
+                      ) : null}
+                      <span class="text-muted-foreground text-xs tabular-nums">{player.rating}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )}
+</section>
