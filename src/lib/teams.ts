@@ -4,6 +4,8 @@
 // this a ready TeamPlayer[] (ratings already resolved, a missing one defaulted to 5), so
 // the algorithm here is pure and deterministic -- no I/O, no "no rating" branch.
 
+import type { PlayerPosition } from "@/lib/profiles";
+
 export type TeamId = "A" | "B";
 
 export const TEAM_IDS = ["A", "B"] as const satisfies readonly TeamId[];
@@ -27,8 +29,8 @@ export interface TeamPlayer {
   // Sign-up queue position: the deterministic tie-breaker whenever ratings are equal.
   position: number;
   rating: number;
-  // primary_position === 'setter' || secondary_position === 'setter'.
-  isSetter: boolean;
+  primaryPosition: PlayerPosition | null;
+  secondaryPosition: PlayerPosition | null;
 }
 
 export interface AssignedPlayer extends TeamPlayer {
@@ -42,8 +44,29 @@ export type GenerateResult =
   | { ok: true; players: AssignedPlayer[]; averages: Record<TeamId, number>; avgDiff: number }
   | { ok: false; code: "threshold_unmet"; exceededBy: number };
 
-// Serpentine pick: A,B, B,A, A,B, ... Each pair of picks flips direction, which keeps both
-// the sizes (differ by at most one) and the rating sums close before any refinement.
+// A player is a setter if either declared position is 'setter' -- FR-018 reads the pair.
+export function isSetter(player: Pick<TeamPlayer, "primaryPosition" | "secondaryPosition">): boolean {
+  return player.primaryPosition === "setter" || player.secondaryPosition === "setter";
+}
+
+// Court role for positional balancing is the player's PRIMARY position -- what they'd play on
+// court. A player with no declared primary is "flex" and floats freely to even out sizes.
+type Role = PlayerPosition | "flex";
+
+// Deterministic role ordering for the seed draft; also the order a full six lines up in.
+const ROLE_ORDER: readonly Role[] = ["setter", "opposite", "outside", "middle", "libero", "flex"];
+
+function roleOf(player: TeamPlayer): Role {
+  return player.primaryPosition ?? "flex";
+}
+
+function roleRank(role: Role): number {
+  return ROLE_ORDER.indexOf(role);
+}
+
+// Serpentine pick: A,B, B,A, A,B, ... Each pair of picks flips direction, which keeps the sizes
+// within one and -- because the seed is grouped by role -- splits each position evenly across
+// the two teams before any refinement (so neither side ends up with, say, both middles).
 function snakeTeam(index: number): TeamId {
   const forwardPair = Math.floor(index / 2) % 2 === 0;
   const firstOfPair = index % 2 === 0;
@@ -63,8 +86,24 @@ function avgDiffOf(players: AssignedPlayer[]): number {
   return Math.abs(average(teamMembers(players, "A")) - average(teamMembers(players, "B")));
 }
 
+// Soft positional objective (FR-018 extension): how unevenly the court roles are split between
+// the teams, summed per role. 0 means every position is shared equally. Lower is better; it is
+// a secondary goal that never causes a refusal -- only the rating threshold does.
+function positionImbalance(players: AssignedPlayer[]): number {
+  const counts = new Map<Role, { A: number; B: number }>();
+  for (const player of players) {
+    const role = roleOf(player);
+    const entry = counts.get(role) ?? { A: 0, B: 0 };
+    entry[player.team] += 1;
+    counts.set(role, entry);
+  }
+  let total = 0;
+  for (const entry of counts.values()) total += Math.abs(entry.A - entry.B);
+  return total;
+}
+
 function teamHasSetter(players: AssignedPlayer[], team: TeamId): boolean {
-  return players.some((player) => player.team === team && player.isSetter);
+  return players.some((player) => player.team === team && isSetter(player));
 }
 
 // Highest rating wins; sign-up position breaks ties. Operates on shared object references,
@@ -81,11 +120,11 @@ function ensureSetterEachTeam(players: AssignedPlayer[]): void {
   for (const poorTeam of TEAM_IDS) {
     if (teamHasSetter(players, poorTeam)) continue;
     const richTeam: TeamId = poorTeam === "A" ? "B" : "A";
-    const richSetters = teamMembers(players, richTeam).filter((player) => player.isSetter);
+    const richSetters = teamMembers(players, richTeam).filter((player) => isSetter(player));
     if (richSetters.length < 2) continue; // can't spare one -- a substitute covers it later
 
     const setterOut = [...richSetters].sort((a, b) => a.rating - b.rating || a.position - b.position)[0];
-    const candidates = teamMembers(players, poorTeam).filter((player) => !player.isSetter);
+    const candidates = teamMembers(players, poorTeam).filter((player) => !isSetter(player));
     if (candidates.length === 0) continue;
     const playerIn = [...candidates].sort(
       (a, b) =>
@@ -97,11 +136,11 @@ function ensureSetterEachTeam(players: AssignedPlayer[]): void {
   }
 }
 
-// Reduce the average gap with the best legal pairwise swap until it is within threshold or
-// no improving swap remains. Iteration order is fixed (by sign-up position), and a candidate
-// replaces the best only when strictly better, so the first minimal swap wins -- deterministic.
-// With >= 2 setters a swap may not strip a team of its last real setter (preserveSetters).
-// Bounded: every applied swap strictly shrinks the gap; rosters are <= 12.
+// Reduce the average gap with the best legal pairwise swap until it is within threshold or no
+// improving swap remains. Iteration order is fixed (by sign-up position); a candidate replaces
+// the best only when strictly better on rating, with positional imbalance as the tie-break, so
+// the first minimal swap wins -- deterministic. With >= 2 setters a swap may not strip a team of
+// its last real setter. Bounded: every applied swap strictly shrinks the gap; rosters are <= 12.
 function refineBalance(players: AssignedPlayer[], preserveSetters: boolean): void {
   for (;;) {
     const current = avgDiffOf(players);
@@ -109,7 +148,7 @@ function refineBalance(players: AssignedPlayer[], preserveSetters: boolean): voi
 
     const teamA = teamMembers(players, "A").sort((a, b) => a.position - b.position);
     const teamB = teamMembers(players, "B").sort((a, b) => a.position - b.position);
-    let best: { a: AssignedPlayer; b: AssignedPlayer; diff: number } | null = null;
+    let best: { a: AssignedPlayer; b: AssignedPlayer; diff: number; imbalance: number } | null = null;
 
     for (const a of teamA) {
       for (const b of teamB) {
@@ -117,11 +156,16 @@ function refineBalance(players: AssignedPlayer[], preserveSetters: boolean): voi
         b.team = "A";
         const legal = !preserveSetters || (teamHasSetter(players, "A") && teamHasSetter(players, "B"));
         const diff = avgDiffOf(players);
+        const imbalance = positionImbalance(players);
         a.team = "A";
         b.team = "B";
 
         if (!legal || diff >= current - EPSILON) continue;
-        if (best === null || diff < best.diff - EPSILON) best = { a, b, diff };
+        const better =
+          best === null ||
+          diff < best.diff - EPSILON ||
+          (Math.abs(diff - best.diff) <= EPSILON && imbalance < best.imbalance);
+        if (better) best = { a, b, diff, imbalance };
       }
     }
 
@@ -131,37 +175,83 @@ function refineBalance(players: AssignedPlayer[], preserveSetters: boolean): voi
   }
 }
 
+// Secondary pass (soft positions): once rating is within threshold, even out the court roles with
+// swaps that keep the average gap within threshold and keep each team's setter. Picks the swap
+// that most reduces positional imbalance; smaller resulting rating gap breaks ties. Deterministic
+// and bounded: every applied swap strictly reduces imbalance.
+function refinePositions(players: AssignedPlayer[], preserveSetters: boolean): void {
+  for (;;) {
+    const current = positionImbalance(players);
+    if (current === 0) return;
+
+    const teamA = teamMembers(players, "A").sort((a, b) => a.position - b.position);
+    const teamB = teamMembers(players, "B").sort((a, b) => a.position - b.position);
+    let best: { a: AssignedPlayer; b: AssignedPlayer; imbalance: number; diff: number } | null = null;
+
+    for (const a of teamA) {
+      for (const b of teamB) {
+        if (roleOf(a) === roleOf(b)) continue; // same role: swapping changes no composition
+        a.team = "B";
+        b.team = "A";
+        const diff = avgDiffOf(players);
+        const legal =
+          diff <= TEAM_AVG_DIFF_MAX + EPSILON &&
+          (!preserveSetters || (teamHasSetter(players, "A") && teamHasSetter(players, "B")));
+        const imbalance = positionImbalance(players);
+        a.team = "A";
+        b.team = "B";
+
+        if (!legal || imbalance >= current) continue;
+        const better =
+          best === null || imbalance < best.imbalance || (imbalance === best.imbalance && diff < best.diff - EPSILON);
+        if (better) best = { a, b, imbalance, diff };
+      }
+    }
+
+    if (best === null) return; // no rating-safe swap improves the composition
+    best.a.team = "B";
+    best.b.team = "A";
+  }
+}
+
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
-// Split a confirmed training's roster into two teams (FR-017/FR-018/FR-020). Deterministic:
-// the same players + ratings always produce the same split. Refuses ONLY when the closest
-// reachable split still exceeds the average-rating threshold, reporting by how much.
+// Split a confirmed training's roster into two teams (FR-017/FR-018/FR-020), balanced on average
+// rating and -- as a soft secondary goal -- on court positions (so each side resembles a real
+// line-up: a setter, an opposite, two outside hitters, two middles when the roster allows).
+// Deterministic: the same players + ratings + positions always produce the same split. Refuses
+// ONLY when the closest reachable split still exceeds the average-rating threshold; positions
+// never cause a refusal.
 export function generateTeams(input: TeamPlayer[]): GenerateResult {
-  // 1. Deterministic order: rating desc, then sign-up position asc.
-  const ordered = [...input].sort((a, b) => b.rating - a.rating || a.position - b.position);
-
-  // 2. Serpentine draft into A/B (sizes within one, sums already close).
+  // 1. Seed grouped by role (then rating desc, then sign-up position): the serpentine draft over
+  //    this order splits every position evenly and keeps the rating sums close.
+  const ordered = [...input].sort(
+    (a, b) => roleRank(roleOf(a)) - roleRank(roleOf(b)) || b.rating - a.rating || a.position - b.position,
+  );
   const assigned: AssignedPlayer[] = ordered.map((player, index) => ({
     ...player,
     team: snakeTeam(index),
     isSubstituteSetter: false,
   }));
 
-  const setterCount = assigned.filter((player) => player.isSetter).length;
+  const setterCount = assigned.filter((player) => isSetter(player)).length;
 
-  // 3. Distribute real setters when there are enough to give each team one.
+  // 2. Distribute real setters when there are enough to give each team one.
   if (setterCount >= 2) ensureSetterEachTeam(assigned);
 
-  // 4. Balance. With >= 2 setters, keep each team's real setter through the swaps.
+  // 3. Balance rating within threshold (keeping each team's real setter when >= 2 exist).
   refineBalance(assigned, setterCount >= 2);
 
-  // 5. Substitute setters last, so refinement can't invalidate the pick: any team still
-  //    without a real setter flags its highest-rated player (FR-018).
+  // 4. Even out positions without pushing the rating gap back over threshold (soft goal).
+  refinePositions(assigned, setterCount >= 2);
+
+  // 5. Substitute setters last, so refinement can't invalidate the pick: any team still without
+  //    a real setter flags its highest-rated player (FR-018).
   for (const team of TEAM_IDS) {
     const members = teamMembers(assigned, team);
-    if (members.some((player) => player.isSetter)) continue;
+    if (members.some((player) => isSetter(player))) continue;
     const substitute = highestRated(members);
     if (substitute) substitute.isSubstituteSetter = true;
   }
