@@ -3,33 +3,33 @@ import { LogOut, User } from "lucide-react";
 import Layout from "@/layouts/Layout.astro";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 
-const { user, isOrganizer } = Astro.locals;
+const { user, isOrganizer, lang } = Astro.locals;
+const d = t(lang);
 ---
 
-<Layout title="Dashboard">
+<Layout title={d.dashboard.pageTitle}>
   <main class="flex flex-1 items-start justify-center p-4 sm:items-center">
     <Card className="w-full max-w-sm">
       <CardHeader>
         <CardTitle className="text-2xl">
-          <h1>Dashboard</h1>
+          <h1>{d.dashboard.heading}</h1>
         </CardTitle>
         <CardDescription>
-          Signed in as <span class="text-foreground font-medium break-all">{user?.email}</span>
+          {d.common.signedInAs} <span class="text-foreground font-medium break-all">{user?.email}</span>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p class="text-muted-foreground text-sm">
-          Open a training from the link the organizer shares in the group chat.
-        </p>
+        <p class="text-muted-foreground text-sm">{d.dashboard.hint}</p>
         <a href="/profile" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
           <User aria-hidden="true" />
-          Your profile
+          {d.dashboard.profile}
         </a>
         {isOrganizer && (
           <a href="/organizer" class:list={[cn(buttonVariants(), "w-full")]}>
-            Organizer: trainings
+            {d.dashboard.organizer}
           </a>
         )}
       </CardContent>
@@ -37,7 +37,7 @@ const { user, isOrganizer } = Astro.locals;
         <form method="POST" action="/api/auth/signout" class="w-full">
           <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
             <LogOut aria-hidden="true" />
-            Sign out
+            {d.dashboard.signOut}
           </button>
         </form>
       </CardFooter>

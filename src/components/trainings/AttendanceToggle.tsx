@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { t, type Lang } from "@/i18n";
 import { attendanceErrorMessage, type AttendanceStatus } from "@/lib/attendance";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 interface Props {
+  lang: Lang;
   trainingId: string;
   userId: string;
   // The player's current mark, or null when unmarked.
@@ -23,6 +25,7 @@ interface Props {
 // Per-player present/absent toggle for the organizer attendance UI (S-07). POSTs to the attendance
 // route on change; mirrors TrainingRatingInput's fetch + status pattern.
 export default function AttendanceToggle({
+  lang,
   trainingId,
   userId,
   initialStatus = null,
@@ -31,6 +34,7 @@ export default function AttendanceToggle({
   seedMessage,
   onSaved,
 }: Props) {
+  const d = t(lang).organizer.attendance;
   const [status, setStatus] = useState<AttendanceStatus | null>(initialStatus);
   const [save, setSave] = useState<SaveState>(seedStatus);
   const [message, setMessage] = useState<string | null>(seedMessage ?? null);
@@ -49,7 +53,7 @@ export default function AttendanceToggle({
         const data: unknown = await res.json().catch(() => null);
         const code = data && typeof data === "object" ? (data as Record<string, unknown>).error : null;
         setSave("error");
-        setMessage(attendanceErrorMessage(typeof code === "string" ? code : null));
+        setMessage(attendanceErrorMessage(typeof code === "string" ? code : null, lang));
         return;
       }
       const data: unknown = await res.json().catch(() => null);
@@ -59,7 +63,7 @@ export default function AttendanceToggle({
       onSaved?.(next, typeof rating === "number" ? rating : null);
     } catch {
       setSave("error");
-      setMessage(attendanceErrorMessage("save_failed"));
+      setMessage(attendanceErrorMessage("save_failed", lang));
     }
   }
 
@@ -69,7 +73,7 @@ export default function AttendanceToggle({
         <div
           className="flex gap-0.5 rounded-md border p-0.5"
           role="group"
-          aria-label={playerLabel ? `Attendance for ${playerLabel}` : "Attendance"}
+          aria-label={playerLabel ? d.group(playerLabel) : d.groupFallback}
         >
           <Button
             type="button"
@@ -79,7 +83,7 @@ export default function AttendanceToggle({
             aria-pressed={status === "present"}
             onClick={() => void mark("present")}
           >
-            Present
+            {d.present}
           </Button>
           <Button
             type="button"
@@ -89,7 +93,7 @@ export default function AttendanceToggle({
             aria-pressed={status === "absent"}
             onClick={() => void mark("absent")}
           >
-            Absent
+            {d.absent}
           </Button>
         </div>
 

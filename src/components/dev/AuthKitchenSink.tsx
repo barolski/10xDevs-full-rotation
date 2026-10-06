@@ -7,13 +7,14 @@ import { SubmitButton } from "@/components/form/SubmitButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Lang } from "@/i18n";
 
 // Rendered statically by src/pages/dev/kitchen-sink.astro. Lives in React because Astro-side JSX
 // passed as a prop (e.g. `icon={<Lock />}`) is not a React element. Only one full form is rendered:
 // SignInForm and SignUpForm share input ids, which would cross-wire labels on this page.
 const noop = () => undefined;
 
-export function AuthKitchenSink() {
+export function AuthKitchenSink({ lang }: { lang: Lang }) {
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <Card>
@@ -21,7 +22,7 @@ export function AuthKitchenSink() {
           <CardTitle>Default: sign in</CardTitle>
         </CardHeader>
         <CardContent>
-          <SignInForm />
+          <SignInForm lang={lang} />
         </CardContent>
       </Card>
 
@@ -54,7 +55,7 @@ export function AuthKitchenSink() {
             value="secret"
             onChange={noop}
             icon={<Lock className="size-4" />}
-            endContent={<PasswordToggle visible={false} onToggle={noop} />}
+            endContent={<PasswordToggle lang={lang} visible={false} onToggle={noop} />}
           />
           <div className="grid gap-2">
             <Label htmlFor="ks-disabled">Disabled</Label>

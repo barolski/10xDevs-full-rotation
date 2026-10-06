@@ -1,5 +1,6 @@
 ---
 // One roster (main list or waitlist), rendered by name. Shared by both lists so they can never drift.
+import { t } from "@/i18n";
 import { rosterLabel } from "@/lib/profiles";
 import type { SignupEntry } from "@/lib/signups";
 
@@ -18,6 +19,7 @@ interface Props {
 }
 
 const { title, entries, emptyLabel, highlightUserId, count, showRank = true } = Astro.props;
+const youLabel = t(Astro.locals.lang).signup.you;
 ---
 
 <section class="space-y-2">
@@ -55,7 +57,7 @@ const { title, entries, emptyLabel, highlightUserId, count, showRank = true } = 
               </span>
             )}
             <span class="min-w-0 break-words">{rosterLabel(entry)}</span>
-            {isMe && <span class="ml-auto text-xs font-semibold tracking-wide uppercase">you</span>}
+            {isMe && <span class="ml-auto text-xs font-semibold tracking-wide uppercase">{youLabel}</span>}
           </li>
         );
       })}

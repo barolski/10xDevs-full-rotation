@@ -7,10 +7,10 @@ import { loadTraining, unavailableTraining } from "@/lib/training-queries";
 import { placementOf, splitRoster } from "@/lib/signups";
 import { isSignupOpen } from "@/lib/trainings";
 
-const { isOrganizer, user } = Astro.locals;
+const { isOrganizer, user, lang } = Astro.locals;
 const now = new Date();
 const { training, failed } = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
-const unavailable = unavailableTraining(failed);
+const unavailable = unavailableTraining(failed, lang);
 if (!training) {
   Astro.response.status = unavailable.status;
 }

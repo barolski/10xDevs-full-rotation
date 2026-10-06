@@ -4,27 +4,30 @@ import TrainingForm from "@/components/trainings/TrainingForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadTraining, unavailableTraining } from "@/lib/training-queries";
+import { t } from "@/i18n";
 import { utcToZonedLocalInput } from "@/lib/time";
 import { isSignupOpen, trainingErrorMessage } from "@/lib/trainings";
 
 const { training, failed } = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
-const unavailable = unavailableTraining(failed);
+const { lang } = Astro.locals;
+const d = t(lang).organizer.form;
+const unavailable = unavailableTraining(failed, lang);
 if (!training) {
   Astro.response.status = unavailable.status;
 }
 
 const startsAt = training ? new Date(training.starts_at) : null;
 const open = startsAt ? isSignupOpen(startsAt, new Date()) : false;
-const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
+const error = trainingErrorMessage(Astro.url.searchParams.get("error"), lang);
 ---
 
-<Layout title={training ? `Edit: ${training.title}` : unavailable.title}>
+<Layout title={training ? d.editPageTitle(training.title) : unavailable.title}>
   <main class="flex-1 p-4 sm:p-8">
     <div class="mx-auto w-full max-w-md space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            <h1>{training ? "Edit training" : unavailable.title}</h1>
+            <h1>{training ? d.editHeading : unavailable.title}</h1>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -32,6 +35,7 @@ const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
             <p class="text-muted-foreground text-sm">{unavailable.message}</p>
           ) : open ? (
             <TrainingForm
+              lang={lang}
               action={`/api/organizer/trainings/${training.id}`}
               initial={{
                 title: training.title,
@@ -40,14 +44,14 @@ const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
                 note: training.note ?? "",
               }}
               serverError={error}
-              submitLabel="Save changes"
-              pendingText="Saving..."
+              submitLabel={d.save}
+              pendingText={d.saving}
               inlineLabels
               client:load
             />
           ) : (
             <Alert>
-              <AlertDescription>{trainingErrorMessage("signup_closed")}</AlertDescription>
+              <AlertDescription>{trainingErrorMessage("signup_closed", lang)}</AlertDescription>
             </Alert>
           )}
         </CardContent>

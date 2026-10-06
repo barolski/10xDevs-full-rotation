@@ -2,12 +2,14 @@
 import { ShieldAlert } from "lucide-react";
 import Layout from "@/layouts/Layout.astro";
 import { buttonVariants } from "@/components/ui/button";
+import { t } from "@/i18n";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 Astro.response.status = 403;
+const d = t(Astro.locals.lang).forbidden;
 ---
 
-<Layout title="Organizers only">
+<Layout title={d.title}>
   <main class="flex flex-1 items-center justify-center p-4">
     <Card className="w-full max-w-sm text-center">
       <CardHeader className="justify-items-center gap-3">
@@ -15,13 +17,13 @@ Astro.response.status = 403;
           <ShieldAlert className="size-5" aria-hidden="true" />
         </span>
         <CardTitle className="text-2xl">
-          <h1>Organizers only</h1>
+          <h1>{d.title}</h1>
         </CardTitle>
-        <CardDescription>This area is available to organizer accounts only.</CardDescription>
+        <CardDescription>{d.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <a href="/dashboard" class:list={[buttonVariants({ variant: "outline" })]}>
-          Back to dashboard
+          {d.back}
         </a>
       </CardContent>
     </Card>

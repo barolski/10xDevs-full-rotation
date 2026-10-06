@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { t, type Lang } from "@/i18n";
 import { RATING_DEFAULT, RATING_MAX, RATING_MIN, RATING_STEP, ratingErrorMessage, validateRating } from "@/lib/ratings";
 
 type Status = "idle" | "saving" | "saved" | "error";
 
 interface Props {
+  lang: Lang;
   trainingId: string;
   userId: string;
   // The player's current rating. The organizer page guarantees a default-5 row for every main-list
@@ -21,6 +23,7 @@ interface Props {
 }
 
 export default function TrainingRatingInput({
+  lang,
   trainingId,
   userId,
   initialRating = null,
@@ -29,6 +32,7 @@ export default function TrainingRatingInput({
   seedMessage,
   disabled = false,
 }: Props) {
+  const d = t(lang).organizer.ratings;
   // A disabled (absent) input shows an empty placeholder, never a number that is not saved anywhere.
   const [value, setValue] = useState<string>(disabled ? "" : String(initialRating ?? RATING_DEFAULT));
   const [savedRating, setSavedRating] = useState<number | null>(initialRating);
@@ -43,7 +47,7 @@ export default function TrainingRatingInput({
     const result = validateRating(value);
     if (!result.ok) {
       setStatus("error");
-      setMessage(ratingErrorMessage(result.code));
+      setMessage(ratingErrorMessage(result.code, lang));
       return;
     }
     setStatus("saving");
@@ -58,14 +62,14 @@ export default function TrainingRatingInput({
         const data: unknown = await res.json().catch(() => null);
         const code = data && typeof data === "object" ? (data as Record<string, unknown>).error : null;
         setStatus("error");
-        setMessage(ratingErrorMessage(typeof code === "string" ? code : null));
+        setMessage(ratingErrorMessage(typeof code === "string" ? code : null, lang));
         return;
       }
       setSavedRating(result.value);
       setStatus("saved");
     } catch {
       setStatus("error");
-      setMessage(ratingErrorMessage("save_failed"));
+      setMessage(ratingErrorMessage("save_failed", lang));
     }
   }
 
@@ -82,7 +86,7 @@ export default function TrainingRatingInput({
           value={value}
           disabled={disabled}
           placeholder="—"
-          aria-label={playerLabel ? `Rating for ${playerLabel}` : "Rating"}
+          aria-label={playerLabel ? d.label(playerLabel) : d.labelFallback}
           aria-invalid={status === "error" ? true : undefined}
           className="h-8 w-20 text-sm"
           onChange={(e) => {

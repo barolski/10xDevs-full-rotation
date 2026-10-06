@@ -1,5 +1,6 @@
 // Profile rules shared by the profile form island and the API route.
 // Browser-safe (no Supabase import); server-only reads live in src/lib/signup-queries.ts.
+import { t, type Lang } from "@/i18n";
 
 export const NICKNAME_MAX = 40;
 
@@ -16,13 +17,10 @@ export const PLAYER_POSITIONS = [
   "libero",
 ] as const satisfies readonly PlayerPosition[];
 
-export const POSITION_LABELS: Record<PlayerPosition, string> = {
-  setter: "Setter",
-  outside: "Outside hitter",
-  opposite: "Opposite",
-  middle: "Middle blocker",
-  libero: "Libero",
-};
+// The position's name in the UI language (the dictionary's `positions` section).
+export function positionLabel(position: PlayerPosition, lang: Lang): string {
+  return t(lang).positions[position];
+}
 
 function isPlayerPosition(value: string): value is PlayerPosition {
   return (PLAYER_POSITIONS as readonly string[]).includes(value);
@@ -84,19 +82,22 @@ export function validatePositions(raw: { primary: string; secondary: string }): 
   return { ok: true, primary, secondary };
 }
 
-const MESSAGES: Record<ProfileErrorCode, string> = {
-  missing_nickname: "Name is required",
-  nickname_too_long: `Name can be at most ${NICKNAME_MAX} characters`,
-  invalid_position: "Pick a position from the list",
-  secondary_without_primary: "Choose a primary position before a secondary one",
-  secondary_equals_primary: "Secondary position must differ from primary",
-  not_found: "Profile not found",
-  save_failed: "Could not save your profile. Please try again.",
-};
+const ERROR_KEYS = {
+  missing_nickname: "missingNickname",
+  nickname_too_long: "nicknameTooLong",
+  invalid_position: "invalidPosition",
+  secondary_without_primary: "secondaryWithoutPrimary",
+  secondary_equals_primary: "secondaryEqualsPrimary",
+  not_found: "notFound",
+  save_failed: "saveFailed",
+} as const satisfies Record<ProfileErrorCode, string>;
 
-export function profileErrorMessage(code: string | null): string | null {
+// Unknown codes get the generic save-failed message: the server's error code is never echoed back verbatim.
+export function profileErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
-  return code in MESSAGES ? MESSAGES[code as ProfileErrorCode] : MESSAGES.save_failed;
+  const errors = t(lang).profile.errors;
+  const key = Object.hasOwn(ERROR_KEYS, code) ? ERROR_KEYS[code as ProfileErrorCode] : "saveFailed";
+  return key === "nicknameTooLong" ? errors.nicknameTooLong(NICKNAME_MAX) : errors[key];
 }
 
 // The single place that decides what a roster calls someone. The positions-and-ratings slice

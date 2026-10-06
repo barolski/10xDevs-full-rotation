@@ -27,7 +27,7 @@ const theme = Astro.url.searchParams.get("theme") === "light" ? "light" : "dark"
           </a>
         </nav>
       </header>
-      <AuthKitchenSink />
+      <AuthKitchenSink lang={Astro.locals.lang} />
     </main>
   </Layout>
 )}

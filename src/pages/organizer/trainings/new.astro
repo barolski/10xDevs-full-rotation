@@ -2,26 +2,30 @@
 import Layout from "@/layouts/Layout.astro";
 import TrainingForm from "@/components/trainings/TrainingForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { t } from "@/i18n";
 import { trainingErrorMessage } from "@/lib/trainings";
 
-const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
+const { lang } = Astro.locals;
+const d = t(lang).organizer.form;
+const error = trainingErrorMessage(Astro.url.searchParams.get("error"), lang);
 ---
 
-<Layout title="New training">
+<Layout title={d.newPageTitle}>
   <main class="flex-1 p-4 sm:p-8">
     <div class="mx-auto w-full max-w-md space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            <h1>New training</h1>
+            <h1>{d.newHeading}</h1>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <TrainingForm
+            lang={lang}
             action="/api/organizer/trainings"
             serverError={error}
-            submitLabel="Create training"
-            pendingText="Creating..."
+            submitLabel={d.create}
+            pendingText={d.creating}
             inlineLabels
             client:load
           />

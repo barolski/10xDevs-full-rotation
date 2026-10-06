@@ -1,4 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
+import { isLang, langFromCookie } from "@/i18n";
 import { createClient } from "@/lib/supabase";
 import { safeNext, withNext } from "@/lib/redirect";
 
@@ -14,6 +15,13 @@ function matchesRoute(pathname: string, route: string) {
 export const onRequest = defineMiddleware(async (context, next) => {
   const supabase = createClient(context.request.headers, context.cookies);
 
+  // Set first so every response path (redirects, API routes, rewrites) has the language.
+  context.locals.lang = langFromCookie(context.request.headers.get("cookie"));
+  // Dev only (the dev pages 404 in production): `?lang=pl|en` previews the other language without the cookie.
+  if (import.meta.env.DEV) {
+    const preview = context.url.searchParams.get("lang");
+    if (isLang(preview)) context.locals.lang = preview;
+  }
   context.locals.user = null;
   context.locals.isOrganizer = false;
 

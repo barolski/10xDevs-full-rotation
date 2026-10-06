@@ -2,32 +2,36 @@
 import Layout from "@/layouts/Layout.astro";
 import SignInForm from "@/components/auth/SignInForm";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { t } from "@/i18n";
 import { safeNext, withNext } from "@/lib/redirect";
 
+const { lang } = Astro.locals;
+const d = t(lang).auth.signIn;
+// A short error code from the sign-in route (never text); the form turns it into a message.
 const error = Astro.url.searchParams.get("error");
 const next = safeNext(Astro.url.searchParams.get("next"));
 ---
 
-<Layout title="Sign in">
+<Layout title={d.pageTitle}>
   <main class="flex flex-1 items-start justify-center p-4 pt-8 sm:pt-12">
     <Card className="w-full max-w-sm">
       <CardHeader className="gap-0.5 text-center">
         <CardTitle className="text-2xl">
-          <h1>Welcome back</h1>
+          <h1>{d.heading}</h1>
         </CardTitle>
-        <CardDescription>Let's log in to the system</CardDescription>
+        <CardDescription>{d.description}</CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
-        <SignInForm serverError={error} next={next} client:load />
+        <SignInForm lang={lang} serverError={error} next={next} client:load />
       </CardContent>
       <CardFooter className="justify-center">
         <p class="text-muted-foreground text-sm">
-          Don't have an account?{" "}
+          {d.noAccount}{" "}
           <a
             href={withNext("/auth/signup", next)}
             class="text-foreground hover:decoration-primary underline underline-offset-4"
           >
-            Sign up
+            {d.signUpLink}
           </a>
         </p>
       </CardFooter>

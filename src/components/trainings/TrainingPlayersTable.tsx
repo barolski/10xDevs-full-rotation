@@ -3,9 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import AttendanceToggle from "@/components/trainings/AttendanceToggle";
 import TrainingRatingInput from "@/components/trainings/TrainingRatingInput";
 import type { AttendanceStatus } from "@/lib/attendance";
-import { PLAYER_BUCKET_BADGE, type PlayerRow } from "@/lib/training-players";
+import { t, type Lang } from "@/i18n";
+import { PLAYER_BUCKET_VARIANT, type PlayerRow } from "@/lib/training-players";
 
 interface Props {
+  lang: Lang;
   trainingId: string;
   rows: PlayerRow[];
   // True once the training has been played (confirmed + started): only then do the Attendance and
@@ -21,20 +23,20 @@ interface Marks {
   rating: number | null;
 }
 
-const DASH = (
-  <>
-    <span aria-hidden="true" className="text-muted-foreground">
-      —
-    </span>
-    <span className="sr-only">Not applicable</span>
-  </>
-);
-
 // One table for the whole group of a training: player, training bucket, attendance and rating. A
 // single island (not one per cell) because attendance drives the rating cell: marking a player absent
 // disables their rating, marking them present again restores the server's rating. From `sm` up it is
 // a real table; below that each row becomes a stacked card, so the controls never scroll sideways.
-export default function TrainingPlayersTable({ trainingId, rows, ratable, controlsFailed = false }: Props) {
+export default function TrainingPlayersTable({ lang, trainingId, rows, ratable, controlsFailed = false }: Props) {
+  const d = t(lang).organizer.players;
+  const dash = (
+    <>
+      <span aria-hidden="true" className="text-muted-foreground">
+        —
+      </span>
+      <span className="sr-only">{d.notApplicable}</span>
+    </>
+  );
   const showControls = ratable && !controlsFailed;
   const [marks, setMarks] = useState<Record<string, Marks>>(() =>
     Object.fromEntries(rows.map((row) => [row.userId, { attendance: row.attendance, rating: row.rating }])),
@@ -42,29 +44,29 @@ export default function TrainingPlayersTable({ trainingId, rows, ratable, contro
 
   if (rows.length === 0) {
     return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-sm">No players yet.</p>
+      <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-sm">{d.noPlayers}</p>
     );
   }
 
   return (
     <div className="rounded-lg border">
       <table className="block w-full text-sm sm:table">
-        <caption className="sr-only">Players for this training</caption>
+        <caption className="sr-only">{d.caption}</caption>
         <thead className="hidden sm:table-header-group">
           <tr className="text-muted-foreground border-b text-left text-xs">
             <th scope="col" className="px-3 py-2 font-medium">
-              Player
+              {d.player}
             </th>
             <th scope="col" className="px-3 py-2 font-medium">
-              Training
+              {d.training}
             </th>
             {showControls && (
               <>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  Attendance
+                  {d.attendance}
                 </th>
                 <th scope="col" className="px-3 py-2 font-medium">
-                  Rating
+                  {d.rating}
                 </th>
               </>
             )}
@@ -73,7 +75,7 @@ export default function TrainingPlayersTable({ trainingId, rows, ratable, contro
         <tbody className="block sm:table-row-group">
           {rows.map((row) => {
             const current = marks[row.userId] ?? { attendance: row.attendance, rating: row.rating };
-            const badge = PLAYER_BUCKET_BADGE[row.bucket];
+            const badgeVariant = PLAYER_BUCKET_VARIANT[row.bucket];
             const inMain = row.bucket === "main";
             const absent = current.attendance === "absent";
             return (
@@ -90,14 +92,15 @@ export default function TrainingPlayersTable({ trainingId, rows, ratable, contro
                   </span>
                 </th>
                 <td className="block sm:table-cell sm:px-3 sm:py-2">
-                  <Badge variant={badge.variant}>{badge.label}</Badge>
+                  <Badge variant={badgeVariant}>{d.buckets[row.bucket]}</Badge>
                 </td>
                 {showControls && (
                   <>
                     <td className="flex items-center justify-between gap-3 sm:table-cell sm:px-3 sm:py-2">
-                      <span className="text-muted-foreground text-xs sm:hidden">Attendance</span>
+                      <span className="text-muted-foreground text-xs sm:hidden">{d.attendance}</span>
                       {inMain ? (
                         <AttendanceToggle
+                          lang={lang}
                           trainingId={trainingId}
                           userId={row.userId}
                           initialStatus={row.attendance}
@@ -107,13 +110,14 @@ export default function TrainingPlayersTable({ trainingId, rows, ratable, contro
                           }}
                         />
                       ) : (
-                        DASH
+                        dash
                       )}
                     </td>
                     <td className="flex items-center justify-between gap-3 sm:table-cell sm:px-3 sm:py-2">
-                      <span className="text-muted-foreground text-xs sm:hidden">Rating</span>
+                      <span className="text-muted-foreground text-xs sm:hidden">{d.rating}</span>
                       {inMain ? (
                         <TrainingRatingInput
+                          lang={lang}
                           // Remount when attendance flips so the input picks up the server's rating.
                           key={`${row.userId}:${absent ? "absent" : "rated"}:${current.rating ?? ""}`}
                           trainingId={trainingId}
@@ -123,7 +127,7 @@ export default function TrainingPlayersTable({ trainingId, rows, ratable, contro
                           disabled={absent}
                         />
                       ) : (
-                        DASH
+                        dash
                       )}
                     </td>
                   </>

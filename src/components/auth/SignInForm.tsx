@@ -3,13 +3,18 @@ import { FormField } from "@/components/form/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/form/SubmitButton";
 import { ServerError } from "@/components/form/ServerError";
+import { t, type Lang } from "@/i18n";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 interface Props {
+  lang: Lang;
+  // The error *code* from the redirect (e.g. "invalid_credentials"); shown as a message in `lang`.
   serverError?: string | null;
   next?: string | null;
 }
 
-export default function SignInForm({ serverError, next: nextPath }: Props) {
+export default function SignInForm({ lang, serverError, next: nextPath }: Props) {
+  const d = t(lang).auth;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,12 +24,12 @@ export default function SignInForm({ serverError, next: nextPath }: Props) {
   function validate() {
     const next: typeof errors = {};
     if (!email.trim()) {
-      next.email = "Email is required";
+      next.email = d.validation.emailRequired;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      next.email = "Enter a valid email address";
+      next.email = d.validation.emailInvalid;
     }
     if (!password) {
-      next.password = "Password is required";
+      next.password = d.validation.passwordRequired;
     }
     setErrors(next);
     return next;
@@ -66,7 +71,7 @@ export default function SignInForm({ serverError, next: nextPath }: Props) {
       <FormField
         id="email"
         type="email"
-        label="Email Address"
+        label={d.fields.email}
         inlineLabel
         value={email}
         onChange={(v) => {
@@ -78,7 +83,7 @@ export default function SignInForm({ serverError, next: nextPath }: Props) {
 
       <FormField
         id="password"
-        label="Password"
+        label={d.fields.password}
         inlineLabel
         type={showPassword ? "text" : "password"}
         value={password}
@@ -89,6 +94,7 @@ export default function SignInForm({ serverError, next: nextPath }: Props) {
         error={errors.password}
         endContent={
           <PasswordToggle
+            lang={lang}
             visible={showPassword}
             onToggle={() => {
               setShowPassword(!showPassword);
@@ -97,11 +103,11 @@ export default function SignInForm({ serverError, next: nextPath }: Props) {
         }
       />
 
-      <ServerError message={serverError} />
+      <ServerError message={authErrorMessage(serverError, lang)} />
 
       <div className="pt-2">
-        <SubmitButton pending={submitting} pendingText="Signing in...">
-          Sign in
+        <SubmitButton pending={submitting} pendingText={d.signIn.pending}>
+          {d.signIn.submit}
         </SubmitButton>
       </div>
     </form>

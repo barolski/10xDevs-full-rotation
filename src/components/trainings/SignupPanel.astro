@@ -7,11 +7,11 @@
 // the page and inside narrow kitchen-sink cards, and it should follow its own width in each.
 import { CircleAlert, CircleCheck, Users } from "lucide-react";
 import RosterList from "@/components/trainings/RosterList.astro";
-import { ROSTER_UNAVAILABLE } from "@/lib/signup-queries";
 import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { freeMainSlots, MAIN_LIST_SIZE, signupErrorMessage, type Placement, type Roster } from "@/lib/signups";
 import { canWithdraw, type Training } from "@/lib/trainings";
@@ -47,9 +47,10 @@ const {
   error = null,
 } = Astro.props;
 
-const errorMessage = signupErrorMessage(error);
-const noticeMessage =
-  notice === "signed_up" ? "You're signed up." : notice === "withdrawn" ? "You've withdrawn your sign-up." : null;
+const { lang } = Astro.locals;
+const d = t(lang).signup;
+const errorMessage = signupErrorMessage(error, lang);
+const noticeMessage = notice === "signed_up" ? d.notice.signedUp : notice === "withdrawn" ? d.notice.withdrawn : null;
 const free = freeMainSlots(roster);
 
 // Withdrawal outlives the sign-up window: a confirmed training accepts it until it starts, so the
@@ -93,63 +94,57 @@ const lateWithdraw = showWithdraw && !open;
               ) : (
                 <Users className="size-3.5" aria-hidden="true" />
               )}
-              {placement.list === "main" ? "Main list" : "Waitlist"}
+              {placement.list === "main" ? d.mainList : d.waitlist}
               <span class="tabular-nums">#{placement.rank}</span>
             </span>
             <span class="text-muted-foreground text-sm">
-              {placement.list === "main" ? "You're in." : "You'll move up if someone withdraws."}
+              {placement.list === "main" ? d.youAreIn : d.youWillMoveUp}
             </span>
           </p>
         ) : (
-          <p class="text-muted-foreground text-sm">
-            {free > 0
-              ? `${free} of ${MAIN_LIST_SIZE} spots left on the main list.`
-              : "The main list is full — signing up now puts you on the waitlist."}
-          </p>
+          <p class="text-muted-foreground text-sm">{free > 0 ? d.spotsLeft(free, MAIN_LIST_SIZE) : d.mainFull}</p>
         )}
 
         {showWithdraw && (
           <form method="POST" action={`/api/trainings/${training.id}/withdraw`} class="space-y-2">
             <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
-              Withdraw
+              {d.withdraw}
             </button>
-            {lateWithdraw && (
-              <p class="text-muted-foreground text-xs">Sign-ups are closed. Withdrawing now may count as an absence.</p>
-            )}
+            {lateWithdraw && <p class="text-muted-foreground text-xs">{d.lateWithdrawNote}</p>}
           </form>
         )}
         {showSignup && (
           <form method="POST" action={`/api/trainings/${training.id}/signup`}>
             <button type="submit" class:list={[cn(buttonVariants(), "w-full")]}>
-              Sign up
+              {d.signUp}
             </button>
           </form>
         )}
         {showBlocked && (
           <p role="alert" class="bg-warning-soft text-warning-strong rounded-md px-3 py-2 text-sm">
-            {blockReason(absences)}
+            {blockReason(absences, lang)}
           </p>
         )}
       </div>
     )}
 
     {failed ? (
-      <p class="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">{ROSTER_UNAVAILABLE}</p>
+      <p class="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">{d.rosterUnavailable}</p>
     ) : (
       <div class="grid items-start gap-4 @lg:grid-cols-2 @lg:gap-6">
         {/* Two columns from @lg; stacked below, where each list would be too narrow for a name, rank
             and the "you" pill. The waitlist always renders so the columns stay balanced when empty. */}
         <RosterList
-          title="Main list"
+          title={d.mainList}
           entries={roster.main}
-          emptyLabel="Nobody has signed up yet."
+          emptyLabel={d.emptyMain}
           highlightUserId={userId}
           count={`${roster.main.length}/${MAIN_LIST_SIZE}`}
         />
         <RosterList
-          title="Waitlist"
+          title={d.waitlist}
           entries={roster.waitlist}
-          emptyLabel="Nobody is waiting."
+          emptyLabel={d.emptyWaitlist}
           highlightUserId={userId}
           count={String(roster.waitlist.length)}
         />

@@ -1,5 +1,6 @@
 ---
 import { CalendarClock, Clock, MapPin, StickyNote } from "lucide-react";
+import { t } from "@/i18n";
 import { formatTrainingDateTime } from "@/lib/time";
 import { isSignupOpen, signupClosesAt, type Training } from "@/lib/trainings";
 
@@ -9,6 +10,8 @@ interface Props {
 }
 
 const { training, now } = Astro.props;
+const lang = Astro.locals.lang;
+const d = t(lang).training.details;
 const startsAt = new Date(training.starts_at);
 const open = isSignupOpen(startsAt, now);
 ---
@@ -16,30 +19,30 @@ const open = isSignupOpen(startsAt, now);
 <dl class="grid gap-3 text-sm">
   <div class="flex items-start gap-3">
     <dt>
-      <CalendarClock className="text-muted-foreground mt-1 size-4" aria-label="Start" />
+      <CalendarClock className="text-muted-foreground mt-1 size-4" aria-label={d.start} />
     </dt>
-    <dd class="text-base font-semibold">{formatTrainingDateTime(startsAt)}</dd>
+    <dd class="text-base font-semibold">{formatTrainingDateTime(startsAt, lang)}</dd>
   </div>
   <div class="flex items-start gap-3">
     <dt>
-      <MapPin className="text-muted-foreground mt-0.5 size-4" aria-label="Location" />
+      <MapPin className="text-muted-foreground mt-0.5 size-4" aria-label={d.location} />
     </dt>
     <dd class="min-w-0 break-words">{training.location}</dd>
   </div>
   {training.note && (
     <div class="flex items-start gap-3">
       <dt>
-        <StickyNote className="text-muted-foreground mt-0.5 size-4" aria-label="Note" />
+        <StickyNote className="text-muted-foreground mt-0.5 size-4" aria-label={d.note} />
       </dt>
       <dd class="min-w-0 break-words whitespace-pre-line">{training.note}</dd>
     </div>
   )}
   <div class="flex items-start gap-3">
     <dt>
-      <Clock className="text-muted-foreground mt-0.5 size-4" aria-label="Sign-ups" />
+      <Clock className="text-muted-foreground mt-0.5 size-4" aria-label={d.signups} />
     </dt>
     <dd class:list={[open ? "text-foreground" : "text-muted-foreground"]}>
-      {open ? `Sign-ups open until ${formatTrainingDateTime(signupClosesAt(startsAt))}` : "Sign-ups are closed"}
+      {open ? d.signupsOpenUntil(formatTrainingDateTime(signupClosesAt(startsAt), lang)) : d.signupsClosed}
     </dd>
   </div>
 </dl>

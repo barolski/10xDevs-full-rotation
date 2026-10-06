@@ -5,13 +5,13 @@ import GenerateTeamsButton from "@/components/trainings/GenerateTeamsButton";
 import {
   TEAM_AVG_DIFF_MAX,
   TEAM_IDS,
-  TEAM_LABELS,
   isSetter,
   teamsImbalanceWarning,
   type AssignedPlayer,
   type TeamId,
 } from "@/lib/teams";
-import { POSITION_LABELS, rosterLabel } from "@/lib/profiles";
+import { formatNumber, t } from "@/i18n";
+import { positionLabel, rosterLabel } from "@/lib/profiles";
 
 // The organizer-only team split (S-06). Rendered server-side from persisted assignments;
 // GenerateTeamsButton POSTs to the teams route and reloads so this re-renders with the new split.
@@ -25,10 +25,10 @@ interface Props {
 }
 
 const { trainingId, assignments, failed, canGenerate } = Astro.props;
+const { lang } = Astro.locals;
+const d = t(lang).organizer.teams;
 const hasTeams = assignments.length > 0;
-const emptyNote = canGenerate
-  ? "No teams yet — generate them from the confirmed roster."
-  : "No teams were generated for this session.";
+const emptyNote = canGenerate ? d.noTeams : d.noneGenerated;
 
 const membersOf = (team: TeamId) => assignments.filter((player) => player.team === team);
 const averageOf = (members: AssignedPlayer[]) =>
@@ -39,24 +39,24 @@ const averageOf = (members: AssignedPlayer[]) =>
 // What the organizer reads: up to two decimals ("5.33", "7.5", "6"), since a player's rating is an
 // average over past trainings and does not divide evenly. The imbalance check below keeps its own
 // one-decimal averages, so the warning threshold behaves exactly as before.
-const show = (value: number) => Math.round(value * 100) / 100;
+const show = (value: number) => formatNumber(lang, value);
 const displayAverageOf = (members: AssignedPlayer[]) =>
-  members.length === 0 ? 0 : show(members.reduce((sum, player) => sum + player.rating, 0) / members.length);
+  show(members.length === 0 ? 0 : members.reduce((sum, player) => sum + player.rating, 0) / members.length);
 
 // Warning when the split overshoots the average-rating target (generation never refuses).
 const avgDiff = hasTeams ? Math.round(Math.abs(averageOf(membersOf("A")) - averageOf(membersOf("B"))) * 10) / 10 : 0;
-const imbalanceWarning = teamsImbalanceWarning(Math.max(0, Math.round((avgDiff - TEAM_AVG_DIFF_MAX) * 10) / 10));
+const imbalanceWarning = teamsImbalanceWarning(Math.max(0, Math.round((avgDiff - TEAM_AVG_DIFF_MAX) * 10) / 10), lang);
 ---
 
 <section class="space-y-3">
   <div class="flex flex-wrap items-center justify-between gap-2">
-    <h2 class="text-sm font-medium">Teams</h2>
-    {canGenerate && <GenerateTeamsButton trainingId={trainingId} hasExistingTeams={hasTeams} client:load />}
+    <h2 class="text-sm font-medium">{d.title}</h2>
+    {canGenerate && <GenerateTeamsButton lang={lang} trainingId={trainingId} hasExistingTeams={hasTeams} client:load />}
   </div>
 
   {failed ? (
     <Alert variant="destructive">
-      <AlertDescription>Could not load teams. Please refresh the page.</AlertDescription>
+      <AlertDescription>{d.loadFailed}</AlertDescription>
     </Alert>
   ) : !hasTeams ? (
     <p class="text-muted-foreground text-sm">{emptyNote}</p>
@@ -73,8 +73,10 @@ const imbalanceWarning = teamsImbalanceWarning(Math.max(0, Math.round((avgDiff -
           return (
             <div class="rounded-lg border p-3">
               <div class="mb-2 flex items-baseline justify-between gap-2">
-                <h3 class="text-sm font-medium">{TEAM_LABELS[team]}</h3>
-                <span class="text-muted-foreground text-xs tabular-nums">avg {displayAverageOf(members)}</span>
+                <h3 class="text-sm font-medium">{d.teamLabel[team]}</h3>
+                <span class="text-muted-foreground text-xs tabular-nums">
+                  {d.average} {displayAverageOf(members)}
+                </span>
               </div>
               <ul class="divide-border divide-y">
                 {members.map((player) => (
@@ -82,14 +84,14 @@ const imbalanceWarning = teamsImbalanceWarning(Math.max(0, Math.round((avgDiff -
                     <span class="flex min-w-0 flex-col">
                       <span class="min-w-0 break-words text-sm">{rosterLabel(player)}</span>
                       {player.primaryPosition && (
-                        <span class="text-muted-foreground text-xs">{POSITION_LABELS[player.primaryPosition]}</span>
+                        <span class="text-muted-foreground text-xs">{positionLabel(player.primaryPosition, lang)}</span>
                       )}
                     </span>
                     <span class="flex shrink-0 items-center gap-2">
                       {isSetter(player) ? (
-                        <span class:list={[badgeVariants({ variant: "info" })]}>Setter</span>
+                        <span class:list={[badgeVariants({ variant: "info" })]}>{d.setter}</span>
                       ) : player.isSubstituteSetter ? (
-                        <span class:list={[badgeVariants({ variant: "warning" })]}>Substitute setter</span>
+                        <span class:list={[badgeVariants({ variant: "warning" })]}>{d.substituteSetter}</span>
                       ) : null}
                       <span class="text-muted-foreground text-xs tabular-nums">{show(player.rating)}</span>
                     </span>
