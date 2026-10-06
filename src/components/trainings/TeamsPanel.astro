@@ -36,6 +36,13 @@ const averageOf = (members: AssignedPlayer[]) =>
     ? 0
     : Math.round((members.reduce((sum, player) => sum + player.rating, 0) / members.length) * 10) / 10;
 
+// What the organizer reads: up to two decimals ("5.33", "7.5", "6"), since a player's rating is an
+// average over past trainings and does not divide evenly. The imbalance check below keeps its own
+// one-decimal averages, so the warning threshold behaves exactly as before.
+const show = (value: number) => Math.round(value * 100) / 100;
+const displayAverageOf = (members: AssignedPlayer[]) =>
+  members.length === 0 ? 0 : show(members.reduce((sum, player) => sum + player.rating, 0) / members.length);
+
 // Warning when the split overshoots the average-rating target (generation never refuses).
 const avgDiff = hasTeams ? Math.round(Math.abs(averageOf(membersOf("A")) - averageOf(membersOf("B"))) * 10) / 10 : 0;
 const imbalanceWarning = teamsImbalanceWarning(Math.max(0, Math.round((avgDiff - TEAM_AVG_DIFF_MAX) * 10) / 10));
@@ -67,7 +74,7 @@ const imbalanceWarning = teamsImbalanceWarning(Math.max(0, Math.round((avgDiff -
             <div class="rounded-lg border p-3">
               <div class="mb-2 flex items-baseline justify-between gap-2">
                 <h3 class="text-sm font-medium">{TEAM_LABELS[team]}</h3>
-                <span class="text-muted-foreground text-xs tabular-nums">avg {averageOf(members)}</span>
+                <span class="text-muted-foreground text-xs tabular-nums">avg {displayAverageOf(members)}</span>
               </div>
               <ul class="divide-border divide-y">
                 {members.map((player) => (
@@ -84,7 +91,7 @@ const imbalanceWarning = teamsImbalanceWarning(Math.max(0, Math.round((avgDiff -
                       ) : player.isSubstituteSetter ? (
                         <span class:list={[badgeVariants({ variant: "warning" })]}>Substitute setter</span>
                       ) : null}
-                      <span class="text-muted-foreground text-xs tabular-nums">{player.rating}</span>
+                      <span class="text-muted-foreground text-xs tabular-nums">{show(player.rating)}</span>
                     </span>
                   </li>
                 ))}
