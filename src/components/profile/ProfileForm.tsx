@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CircleAlert, Save, User } from "lucide-react";
+import { CircleAlert, User } from "lucide-react";
 import { FormField } from "@/components/form/FormField";
 import { ServerError } from "@/components/form/ServerError";
 import { SubmitButton } from "@/components/form/SubmitButton";
@@ -143,8 +143,8 @@ export default function ProfileForm({
         )}
       </div>
 
-      <SubmitButton pending={submitting} pendingText="Saving…" icon={<Save />}>
-        Save
+      <SubmitButton pending={submitting} pendingText="Saving…">
+        Update
       </SubmitButton>
     </form>
   );

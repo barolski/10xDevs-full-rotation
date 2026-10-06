@@ -6,7 +6,7 @@ interface SubmitButtonProps {
   // Driven by the parent form: the auth forms POST natively, which React's form-status hook does not track.
   pending: boolean;
   pendingText: string;
-  icon: ReactNode;
+  icon?: ReactNode;
   children: ReactNode;
 }
 

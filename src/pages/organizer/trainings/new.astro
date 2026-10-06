@@ -10,12 +10,6 @@ const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
 <Layout title="New training">
   <main class="flex-1 p-4 sm:p-8">
     <div class="mx-auto w-full max-w-md space-y-4">
-      <a
-        href="/organizer"
-        class="text-muted-foreground hover:text-foreground inline-block text-sm underline underline-offset-4"
-      >
-        Back to trainings
-      </a>
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
@@ -28,6 +22,7 @@ const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
             serverError={error}
             submitLabel="Create training"
             pendingText="Creating..."
+            inlineLabels
             client:load
           />
         </CardContent>
