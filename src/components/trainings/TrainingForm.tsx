@@ -17,11 +17,21 @@ interface Props {
   serverError?: string | null;
   submitLabel: string;
   pendingText: string;
+  // Labels move into the fields as placeholders and icons are dropped. "Start" keeps its label above the field:
+  // a datetime input has no placeholder, so the label would otherwise be lost once the field is focused.
+  inlineLabels?: boolean;
 }
 
 const EMPTY: TrainingInput = { title: "", startsAtLocal: "", location: "", note: "" };
 
-export default function TrainingForm({ action, initial = EMPTY, serverError, submitLabel, pendingText }: Props) {
+export default function TrainingForm({
+  action,
+  initial = EMPTY,
+  serverError,
+  submitLabel,
+  pendingText,
+  inlineLabels = false,
+}: Props) {
   const [values, setValues] = useState<TrainingInput>(initial);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<TrainingField, string>>>({});
@@ -68,13 +78,14 @@ export default function TrainingForm({ action, initial = EMPTY, serverError, sub
       <FormField
         id="title"
         label="Title"
+        inlineLabel={inlineLabels}
         value={values.title}
         onChange={(v) => {
           update("title", "title", v);
         }}
         placeholder="e.g. Intermediate group"
         error={errors.title}
-        icon={<Type className="size-4" />}
+        icon={inlineLabels ? undefined : <Type className="size-4" />}
       />
 
       <FormField
@@ -87,37 +98,44 @@ export default function TrainingForm({ action, initial = EMPTY, serverError, sub
         }}
         error={errors.starts_at}
         hint={`Time in Poland (Europe/Warsaw). Sign-ups close ${SIGNUP_CLOSE_HOURS} hours before.`}
-        icon={<CalendarClock className="size-4" />}
+        hintAbove={inlineLabels}
+        icon={inlineLabels ? undefined : <CalendarClock className="size-4" />}
       />
 
       <FormField
         id="location"
         label="Location"
+        inlineLabel={inlineLabels}
         value={values.location}
         onChange={(v) => {
           update("location", "location", v);
         }}
         placeholder="e.g. School sports hall, ul. Sportowa 1"
         error={errors.location}
-        icon={<MapPin className="size-4" />}
+        icon={inlineLabels ? undefined : <MapPin className="size-4" />}
       />
 
       <FormField
         id="note"
         label="Note (optional)"
+        inlineLabel={inlineLabels}
         value={values.note}
         onChange={(v) => {
           update("note", "note", v);
         }}
         placeholder="e.g. Entrance from the pitch side"
         error={errors.note}
-        icon={<StickyNote className="size-4" />}
+        icon={inlineLabels ? undefined : <StickyNote className="size-4" />}
         multiline
       />
 
       <ServerError message={serverError} />
 
-      <SubmitButton pending={submitting} pendingText={pendingText} icon={<Save className="size-4" />}>
+      <SubmitButton
+        pending={submitting}
+        pendingText={pendingText}
+        icon={inlineLabels ? undefined : <Save className="size-4" />}
+      >
         {submitLabel}
       </SubmitButton>
     </form>

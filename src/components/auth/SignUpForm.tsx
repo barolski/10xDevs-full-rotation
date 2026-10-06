@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { Mail, Lock, UserPlus } from "lucide-react";
 import { FormField } from "@/components/form/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/form/SubmitButton";
@@ -88,30 +87,28 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
       <FormField
         id="email"
         type="email"
-        label="Email"
+        label="Email Address"
+        inlineLabel
         value={email}
         onChange={(v) => {
           setEmail(v);
           clearError("email");
         }}
-        placeholder="you@example.com"
         error={errors.email}
-        icon={<Mail className="size-4" />}
       />
 
       <FormField
         id="password"
         label="Password"
+        inlineLabel
         type={showPassword ? "text" : "password"}
         value={password}
         onChange={(v) => {
           setPassword(v);
           clearError("password");
         }}
-        placeholder="Min. 6 characters"
         error={errors.password}
         hint={passwordHint}
-        icon={<Lock className="size-4" />}
         endContent={
           <PasswordToggle
             visible={showPassword}
@@ -125,16 +122,15 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
       <FormField
         id="confirmPassword"
         name="confirmPassword"
-        label="Confirm password"
+        label="Confirm Password"
+        inlineLabel
         type={showConfirmPassword ? "text" : "password"}
         value={confirmPassword}
         onChange={(v) => {
           setConfirmPassword(v);
           clearError("confirmPassword");
         }}
-        placeholder="Re-enter your password"
         error={errors.confirmPassword}
-        icon={<Lock className="size-4" />}
         endContent={
           <PasswordToggle
             visible={showConfirmPassword}
@@ -147,9 +143,11 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
 
       <ServerError message={serverError} />
 
-      <SubmitButton pending={submitting} pendingText="Creating account..." icon={<UserPlus className="size-4" />}>
-        Create account
-      </SubmitButton>
+      <div className="pt-2">
+        <SubmitButton pending={submitting} pendingText="Creating account...">
+          Create account
+        </SubmitButton>
+      </div>
     </form>
   );
 }

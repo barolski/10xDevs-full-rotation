@@ -70,7 +70,10 @@ export function subscribeThemePreference(onChange: () => void): () => void {
   const media = window.matchMedia("(prefers-color-scheme: dark)");
   // While on "System", follow the OS switch live.
   const onMedia = () => {
-    if (!isThemeForced() && readThemePreference() === "system") applyThemePreference("system");
+    if (!isThemeForced() && readThemePreference() === "system") {
+      applyThemePreference("system");
+      onChange();
+    }
   };
   // A choice made in another tab.
   const onStorage = (event: StorageEvent) => {

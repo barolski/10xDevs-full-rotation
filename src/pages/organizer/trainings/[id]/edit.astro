@@ -21,12 +21,6 @@ const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
 <Layout title={training ? `Edit: ${training.title}` : unavailable.title}>
   <main class="flex-1 p-4 sm:p-8">
     <div class="mx-auto w-full max-w-md space-y-4">
-      <a
-        href={training ? `/organizer/trainings/${training.id}` : "/organizer"}
-        class="text-muted-foreground hover:text-foreground inline-block text-sm underline underline-offset-4"
-      >
-        {training ? "Back to training" : "Back to trainings"}
-      </a>
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
@@ -48,6 +42,7 @@ const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
               serverError={error}
               submitLabel="Save changes"
               pendingText="Saving..."
+              inlineLabels
               client:load
             />
           ) : (

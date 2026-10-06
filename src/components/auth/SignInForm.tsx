@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { Mail, Lock, LogIn } from "lucide-react";
 import { FormField } from "@/components/form/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/form/SubmitButton";
@@ -67,29 +66,27 @@ export default function SignInForm({ serverError, next: nextPath }: Props) {
       <FormField
         id="email"
         type="email"
-        label="Email"
+        label="Email Address"
+        inlineLabel
         value={email}
         onChange={(v) => {
           setEmail(v);
           clearError("email");
         }}
-        placeholder="you@example.com"
         error={errors.email}
-        icon={<Mail className="size-4" />}
       />
 
       <FormField
         id="password"
         label="Password"
+        inlineLabel
         type={showPassword ? "text" : "password"}
         value={password}
         onChange={(v) => {
           setPassword(v);
           clearError("password");
         }}
-        placeholder="Your password"
         error={errors.password}
-        icon={<Lock className="size-4" />}
         endContent={
           <PasswordToggle
             visible={showPassword}
@@ -102,9 +99,11 @@ export default function SignInForm({ serverError, next: nextPath }: Props) {
 
       <ServerError message={serverError} />
 
-      <SubmitButton pending={submitting} pendingText="Signing in..." icon={<LogIn className="size-4" />}>
-        Sign in
-      </SubmitButton>
+      <div className="pt-2">
+        <SubmitButton pending={submitting} pendingText="Signing in...">
+          Sign in
+        </SubmitButton>
+      </div>
     </form>
   );
 }

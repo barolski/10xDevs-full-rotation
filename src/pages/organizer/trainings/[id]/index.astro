@@ -15,7 +15,7 @@ import { loadRoster, loadOrSeedTrainingRatings, loadRosterStatus } from "@/lib/s
 import { loadAttendance } from "@/lib/attendance-queries";
 import { type AttendanceStatus } from "@/lib/attendance";
 import { loadTeams } from "@/lib/team-queries";
-import { MIN_CONFIRMED, splitRoster, type Roster } from "@/lib/signups";
+import { MAIN_LIST_SIZE, MIN_CONFIRMED, splitRoster, type Roster } from "@/lib/signups";
 import type { RosterStatus } from "@/lib/roster-status";
 import RosterStatusPanel from "@/components/trainings/RosterStatusPanel.astro";
 import { rosterLabel } from "@/lib/profiles";
@@ -59,7 +59,7 @@ const canGenerate = training ? canGenerateTeams(training, now) : false;
 
 // Main-list count against the minimum, so the organizer sees why it confirmed or cancelled (and,
 // while open, live progress toward the minimum). Organizers can read all active sign-ups via RLS.
-// On a roster-load failure show a dash, not 0: "0 / min 10" would misread as "nobody signed up".
+// On a roster-load failure show a dash, not 0: "0 / 12" would misread as "nobody signed up".
 // When the training is ratable, the main list is rendered with inputs, and opening the page
 // guarantees a default-5 rating row for every main-list player (loadOrSeedTrainingRatings).
 let mainCount: number | null = null;
@@ -130,13 +130,7 @@ const notice = Astro.url.searchParams.has("created")
 
 <Layout title={training?.title ?? unavailable.title}>
   <main class="flex-1 p-4 sm:p-8">
-    <div class="mx-auto w-full max-w-md space-y-4">
-      <a
-        href="/organizer"
-        class="text-muted-foreground hover:text-foreground inline-block text-sm underline underline-offset-4"
-      >
-        Back to trainings
-      </a>
+    <div class="mx-auto w-full max-w-md space-y-4 lg:max-w-4xl">
       {training ? (
         <>
           {notice && (
@@ -152,7 +146,7 @@ const notice = Astro.url.searchParams.has("created")
                   {badge?.label}
                 </span>
                 <span class="text-muted-foreground text-sm">
-                  {mainCount ?? "—"} / min {MIN_CONFIRMED}
+                  {mainCount ?? "—"} / {MAIN_LIST_SIZE} (min. {MIN_CONFIRMED})
                 </span>
               </div>
               <CardTitle className="text-2xl">

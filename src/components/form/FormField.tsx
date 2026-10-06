@@ -15,10 +15,14 @@ interface FormFieldProps {
   placeholder?: string;
   error?: string;
   hint?: string;
-  icon: ReactNode;
+  icon?: ReactNode;
   endContent?: ReactNode;
   // Renders a Textarea (icon pinned to the first line) instead of an Input; `type` is ignored.
   multiline?: boolean;
+  // Uses `label` as the input's placeholder, so it disappears once the user types. The <label> stays for screen readers.
+  inlineLabel?: boolean;
+  // Shows `hint` between the label and the control instead of below it. An error still replaces it, below.
+  hintAbove?: boolean;
 }
 
 export function FormField({
@@ -34,32 +38,44 @@ export function FormField({
   icon,
   endContent,
   multiline = false,
+  inlineLabel = false,
+  hintAbove = false,
 }: FormFieldProps) {
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
   const describedBy = error ? errorId : hint ? hintId : undefined;
+  const hintNode = (
+    <p id={hintId} className="text-muted-foreground text-xs">
+      {hint}
+    </p>
+  );
   const controlProps = {
     id,
     name: name ?? id,
     value,
-    placeholder,
+    placeholder: inlineLabel ? label : placeholder,
     "aria-invalid": error ? true : undefined,
     "aria-describedby": describedBy,
-    className: cn("pl-9", endContent && "pr-10"),
+    className: cn(icon && "pl-9", endContent && "pr-10"),
   };
 
   return (
     <div className="grid gap-2">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className={cn(inlineLabel && "sr-only")}>
+        {label}
+      </Label>
+      {hintAbove && !error && hint && hintNode}
       <div className="relative">
-        <span
-          className={cn(
-            "text-muted-foreground pointer-events-none absolute left-3 size-4",
-            multiline ? "top-2.5" : "top-1/2 -translate-y-1/2",
-          )}
-        >
-          {icon}
-        </span>
+        {icon && (
+          <span
+            className={cn(
+              "text-muted-foreground pointer-events-none absolute left-3 size-4",
+              multiline ? "top-2.5" : "top-1/2 -translate-y-1/2",
+            )}
+          >
+            {icon}
+          </span>
+        )}
         {multiline ? (
           <Textarea
             {...controlProps}
@@ -84,10 +100,8 @@ export function FormField({
           <CircleAlert className="size-3" />
           {error}
         </p>
-      ) : hint ? (
-        <p id={hintId} className="text-muted-foreground text-xs">
-          {hint}
-        </p>
+      ) : hint && !hintAbove ? (
+        hintNode
       ) : null}
     </div>
   );
