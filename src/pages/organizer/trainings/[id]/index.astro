@@ -7,18 +7,16 @@ import { CircleCheck, CircleX, DoorOpen, Hourglass } from "lucide-react";
 import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import TrainingRatingInput from "@/components/trainings/TrainingRatingInput";
-import AttendanceToggle from "@/components/trainings/AttendanceToggle";
+import TrainingPlayersTable from "@/components/trainings/TrainingPlayersTable";
 import TeamsPanel from "@/components/trainings/TeamsPanel.astro";
 import { loadTraining, unavailableTraining } from "@/lib/training-queries";
 import { loadRoster, loadOrSeedTrainingRatings, loadRosterStatus } from "@/lib/signup-queries";
 import { loadAttendance } from "@/lib/attendance-queries";
 import { type AttendanceStatus } from "@/lib/attendance";
 import { loadTeams } from "@/lib/team-queries";
-import { MAIN_LIST_SIZE, MIN_CONFIRMED, splitRoster, type Roster } from "@/lib/signups";
+import { MAIN_LIST_SIZE, MIN_CONFIRMED, splitRoster } from "@/lib/signups";
 import type { RosterStatus } from "@/lib/roster-status";
-import RosterStatusPanel from "@/components/trainings/RosterStatusPanel.astro";
-import { rosterLabel } from "@/lib/profiles";
+import { buildPlayerRows, PLAYER_BUCKET_BADGE } from "@/lib/training-players";
 import type { AssignedPlayer } from "@/lib/teams";
 import {
   canGenerateTeams,
@@ -63,8 +61,6 @@ const canGenerate = training ? canGenerateTeams(training, now) : false;
 // When the training is ratable, the main list is rendered with inputs, and opening the page
 // guarantees a default-5 rating row for every main-list player (loadOrSeedTrainingRatings).
 let mainCount: number | null = null;
-let roster: Roster | null = null;
-let rosterFailed = false;
 let ratingsFailed = false;
 let ratings = new Map<string, number>();
 // Attendance (S-07): marks for the main list of a played training, same window as ratings.
@@ -78,10 +74,9 @@ let rosterStatus: RosterStatus | null = null;
 let rosterStatusFailed = false;
 if (training) {
   const rosterLoad = await loadRoster(training.id, Astro.request.headers, Astro.cookies);
-  rosterFailed = rosterLoad.failed;
   rosterStatusFailed = rosterLoad.failed;
   if (!rosterLoad.failed) {
-    roster = splitRoster(rosterLoad.entries);
+    const roster = splitRoster(rosterLoad.entries);
     mainCount = roster.main.length;
 
     const statusLoad = await loadRosterStatus(training.id, rosterLoad.entries, Astro.request.headers, Astro.cookies);
@@ -89,18 +84,24 @@ if (training) {
     rosterStatus = statusLoad.status;
 
     if (ratable) {
+      const attendanceLoad = await loadAttendance(training.id, Astro.request.headers, Astro.cookies);
+      attendanceFailed = attendanceLoad.failed;
+      attendanceMarks = attendanceLoad.marks;
+
+      // Absent players are not rated (their rating row is deleted when they are marked absent), so
+      // they are not seeded with a default either. If attendance failed we do not know who is absent,
+      // so nothing is seeded (an empty list only reads the existing ratings); the page shows the
+      // load-failure alert instead.
       const ratingLoad = await loadOrSeedTrainingRatings(
         training.id,
-        roster.main.map((entry) => entry.user_id),
+        attendanceFailed
+          ? []
+          : roster.main.map((entry) => entry.user_id).filter((userId) => attendanceMarks.get(userId) !== "absent"),
         Astro.request.headers,
         Astro.cookies,
       );
       ratingsFailed = ratingLoad.failed;
       ratings = ratingLoad.ratings;
-
-      const attendanceLoad = await loadAttendance(training.id, Astro.request.headers, Astro.cookies);
-      attendanceFailed = attendanceLoad.failed;
-      attendanceMarks = attendanceLoad.marks;
     }
   }
 }
@@ -115,8 +116,18 @@ if (training && showTeams) {
   teamAssignments = teamsLoad.assignments;
 }
 
-// Ratings apply to the main list only; the waitlist is intentionally not shown here.
-const ratedPlayers = roster ? roster.main : [];
+// One row per player in the group; attendance and rating apply to the main list only.
+const playerRows = rosterStatus ? buildPlayerRows(rosterStatus, attendanceMarks, ratings) : [];
+// Counts above the table, coloured like the Training badges in its rows so the two read together.
+const playerCounts = rosterStatus
+  ? [
+      { ...PLAYER_BUCKET_BADGE.main, label: "Main list", value: `${rosterStatus.main.length} / ${MAIN_LIST_SIZE}` },
+      { ...PLAYER_BUCKET_BADGE.waitlist, value: String(rosterStatus.waitlist.length) },
+      { ...PLAYER_BUCKET_BADGE.blocked, value: String(rosterStatus.blocked.length) },
+      { ...PLAYER_BUCKET_BADGE.noResponse, value: String(rosterStatus.noResponse.length) },
+    ]
+  : [];
+const controlsFailed = ratable && (attendanceFailed || ratingsFailed);
 const ratingNote =
   display === "cancelled"
     ? "This training was cancelled — there are no ratings."
@@ -159,65 +170,37 @@ const notice = Astro.url.searchParams.has("created")
                 <h2 class="text-sm font-medium">Sign-up link</h2>
                 <CopyLinkButton url={shareUrl} client:load />
               </section>
-              <RosterStatusPanel status={rosterStatus} failed={rosterStatusFailed} />
-              {ratable && (
-                <section class="space-y-3">
-                  <h2 class="text-sm font-medium">Attendance</h2>
-                  {rosterFailed || attendanceFailed ? (
-                    <Alert variant="destructive">
-                      <AlertDescription>Could not load attendance. Please refresh the page.</AlertDescription>
-                    </Alert>
-                  ) : ratedPlayers.length === 0 ? (
-                    <p class="text-muted-foreground text-sm">No players on the main list.</p>
-                  ) : (
-                    <ul class="divide-border divide-y">
-                      {ratedPlayers.map((entry, index) => (
-                        <li class="flex items-center justify-between gap-3 py-2">
-                          <span class="flex min-w-0 items-center gap-2">
-                            <span class="text-muted-foreground w-5 text-right text-xs tabular-nums">{index + 1}</span>
-                            <span class="min-w-0 break-words text-sm">{rosterLabel(entry)}</span>
-                          </span>
-                          <AttendanceToggle
-                            trainingId={training.id}
-                            userId={entry.user_id}
-                            initialStatus={attendanceMarks.get(entry.user_id) ?? null}
-                            playerLabel={rosterLabel(entry)}
-                            client:visible
-                          />
+              <section class="space-y-3">
+                <h2 class="text-sm font-medium">Players</h2>
+                {rosterStatusFailed || !rosterStatus ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>Could not load the players. Please refresh the page.</AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    <ul class="flex flex-wrap gap-2" aria-label="Players by status">
+                      {playerCounts.map((count) => (
+                        <li class:list={[badgeVariants({ variant: count.variant }), "tabular-nums"]}>
+                          {count.label} {count.value}
                         </li>
                       ))}
                     </ul>
-                  )}
-                </section>
-              )}
-              <section class="space-y-3">
-                <h2 class="text-sm font-medium">Player ratings</h2>
-                {!ratable ? (
-                  <p class="text-muted-foreground text-sm">{ratingNote}</p>
-                ) : rosterFailed || ratingsFailed ? (
-                  <Alert variant="destructive">
-                    <AlertDescription>Could not load ratings. Please refresh the page.</AlertDescription>
-                  </Alert>
-                ) : ratedPlayers.length === 0 ? (
-                  <p class="text-muted-foreground text-sm">No players on the main list.</p>
-                ) : (
-                  <ul class="divide-border divide-y">
-                    {ratedPlayers.map((entry, index) => (
-                      <li class="flex items-center justify-between gap-3 py-2">
-                        <span class="flex min-w-0 items-center gap-2">
-                          <span class="text-muted-foreground w-5 text-right text-xs tabular-nums">{index + 1}</span>
-                          <span class="min-w-0 break-words text-sm">{rosterLabel(entry)}</span>
-                        </span>
-                        <TrainingRatingInput
-                          trainingId={training.id}
-                          userId={entry.user_id}
-                          initialRating={ratings.get(entry.user_id) ?? null}
-                          playerLabel={rosterLabel(entry)}
-                          client:visible
-                        />
-                      </li>
-                    ))}
-                  </ul>
+                    {!ratable && <p class="text-muted-foreground text-sm">{ratingNote}</p>}
+                    {controlsFailed && (
+                      <Alert variant="destructive">
+                        <AlertDescription>
+                          Could not load attendance and ratings. Please refresh the page.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    <TrainingPlayersTable
+                      trainingId={training.id}
+                      rows={playerRows}
+                      ratable={ratable}
+                      controlsFailed={controlsFailed}
+                      client:load
+                    />
+                  </>
                 )}
               </section>
               {showTeams && (
@@ -238,7 +221,7 @@ const notice = Astro.url.searchParams.has("created")
                   Edit
                 </a>
               )}
-              <a href={`/t/${training.id}`} class:list={[buttonVariants({ variant: "ghost" })]}>
+              <a href={`/t/${training.id}`} class:list={[buttonVariants()]}>
                 Open player view
               </a>
             </CardFooter>

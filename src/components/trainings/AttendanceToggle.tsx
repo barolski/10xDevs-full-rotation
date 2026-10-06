@@ -15,6 +15,9 @@ interface Props {
   // Dev/kitchen-sink only: force a transient save state that can't be produced statically.
   seedStatus?: SaveState;
   seedMessage?: string;
+  // Called after a successful save with the new mark and the player's rating as the server now holds
+  // it (null once absent), so a parent can keep the rating cell in step without a reload.
+  onSaved?: (status: AttendanceStatus, rating: number | null) => void;
 }
 
 // Per-player present/absent toggle for the organizer attendance UI (S-07). POSTs to the attendance
@@ -26,6 +29,7 @@ export default function AttendanceToggle({
   playerLabel,
   seedStatus = "idle",
   seedMessage,
+  onSaved,
 }: Props) {
   const [status, setStatus] = useState<AttendanceStatus | null>(initialStatus);
   const [save, setSave] = useState<SaveState>(seedStatus);
@@ -48,8 +52,11 @@ export default function AttendanceToggle({
         setMessage(attendanceErrorMessage(typeof code === "string" ? code : null));
         return;
       }
+      const data: unknown = await res.json().catch(() => null);
+      const rating = data && typeof data === "object" ? (data as Record<string, unknown>).rating : null;
       setStatus(next);
       setSave("saved");
+      onSaved?.(next, typeof rating === "number" ? rating : null);
     } catch {
       setSave("error");
       setMessage(attendanceErrorMessage("save_failed"));

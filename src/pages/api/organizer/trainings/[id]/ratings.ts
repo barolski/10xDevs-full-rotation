@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase";
 import { canRateTraining, isUuid } from "@/lib/trainings";
 import { loadRoster } from "@/lib/signup-queries";
+import { loadAttendance } from "@/lib/attendance-queries";
 import { loadTraining } from "@/lib/training-queries";
 import { splitRoster } from "@/lib/signups";
 import { validateRating } from "@/lib/ratings";
@@ -50,6 +51,12 @@ export const POST: APIRoute = async (context) => {
   if (!splitRoster(entries).main.some((entry) => entry.user_id === userId)) {
     return bad("not_on_main_list", 409);
   }
+
+  // An absent player did not play, so there is nothing to rate (the attendance trigger also deletes
+  // their rating row when they are marked absent).
+  const { marks, failed: attendanceFailed } = await loadAttendance(id, context.request.headers, context.cookies);
+  if (attendanceFailed) return bad("save_failed", 500);
+  if (marks.get(userId) === "absent") return bad("player_absent", 409);
 
   const result = validateRating(rating);
   if (!result.ok) return bad(result.code, 400);

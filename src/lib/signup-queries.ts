@@ -89,6 +89,36 @@ export async function loadOrSeedTrainingRatings(
   return { ratings: new Map(data.map((row) => [row.user_id, Number(row.rating)])), failed: false };
 }
 
+// One player's rating for a played training, guaranteeing a default-5 row first (same ON CONFLICT DO
+// NOTHING seed as above, so a real rating is never overwritten). Used when an organizer marks a
+// player present again after an absent mark deleted their rating.
+export async function ensureTrainingRating(
+  trainingId: string,
+  userId: string,
+  headers: Headers,
+  cookies: AstroCookies,
+): Promise<{ rating: number | null; failed: boolean }> {
+  const supabase = createClient(headers, cookies);
+  if (!supabase) return { rating: null, failed: true };
+
+  const { error: seedError } = await supabase
+    .from("training_ratings")
+    .upsert(
+      { training_id: trainingId, user_id: userId, rating: RATING_DEFAULT },
+      { onConflict: "training_id,user_id", ignoreDuplicates: true },
+    );
+  if (seedError) return { rating: null, failed: true };
+
+  const { data, error } = await supabase
+    .from("training_ratings")
+    .select("rating")
+    .eq("training_id", trainingId)
+    .eq("user_id", userId)
+    .maybeSingle<{ rating: number | string }>();
+  if (error || !data) return { rating: null, failed: true };
+  return { rating: Number(data.rating), failed: false };
+}
+
 // The player's own no-show lockout status for a training (S-07, FR-010), via the block_info RPC
 // (which reads auth.uid()). Fail-OPEN: on any error treat the player as not blocked — the sign-up
 // trigger is still the hard gate, so a transient read failure must not strand a legitimate player.

@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { canRateTraining, isUuid } from "@/lib/trainings";
-import { loadRoster } from "@/lib/signup-queries";
+import { ensureTrainingRating, loadRoster } from "@/lib/signup-queries";
 import { loadTraining } from "@/lib/training-queries";
 import { splitRoster } from "@/lib/signups";
 import { isAttendanceStatus } from "@/lib/attendance";
@@ -48,5 +48,16 @@ export const POST: APIRoute = async (context) => {
   const { failed: saveFailed } = await saveAttendance(id, userId, status, context.request.headers, context.cookies);
   if (saveFailed) return bad("save_failed", 500);
 
-  return Response.json({ status });
+  // Absent: the DB trigger has just deleted the rating. Present: make sure a rating exists (a prior
+  // absent mark removed it) and hand it back so the island can update the row without a reload.
+  if (status === "absent") return Response.json({ status, rating: null });
+  const { rating, failed: ratingFailed } = await ensureTrainingRating(
+    id,
+    userId,
+    context.request.headers,
+    context.cookies,
+  );
+  if (ratingFailed) return bad("save_failed", 500);
+
+  return Response.json({ status, rating });
 };

@@ -10,7 +10,13 @@ export const RATING_STEP = 0.5;
 export const RATING_DEFAULT = 5;
 
 export type RatingErrorCode =
-  "invalid_rating" | "invalid_request" | "not_ratable" | "not_on_main_list" | "not_found" | "save_failed";
+  | "invalid_rating"
+  | "invalid_request"
+  | "not_ratable"
+  | "not_on_main_list"
+  | "player_absent"
+  | "not_found"
+  | "save_failed";
 
 export type RatingValidation = { ok: true; value: number } | { ok: false; code: "invalid_rating" };
 
@@ -28,6 +34,7 @@ const MESSAGES: Record<RatingErrorCode, string> = {
   invalid_request: "Something went wrong. Please try again.",
   not_ratable: "Ratings open only after the training has taken place",
   not_on_main_list: "Only main-list players can be rated",
+  player_absent: "This player was marked absent and cannot be rated",
   not_found: "That player or training no longer exists",
   save_failed: "Could not save the rating. Please try again.",
 };

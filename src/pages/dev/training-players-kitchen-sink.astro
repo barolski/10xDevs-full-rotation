@@ -1,0 +1,198 @@
+---
+// Dev-only visual gate for the organizer's merged players table: every state of TrainingPlayersTable
+// (all four buckets; unmarked / present / absent main rows; not played; controls failed; empty), the
+// transient save states of its two controls, and the blocked sign-up view. Rendered through the same
+// components the pages ship, rows built by the real rosterStatus() and buildPlayerRows(). Theme forced
+// via ?theme=light|dark. 404 in production.
+import Layout from "@/layouts/Layout.astro";
+import AttendanceToggle from "@/components/trainings/AttendanceToggle";
+import PlayerTrainingCard from "@/components/trainings/PlayerTrainingCard.astro";
+import TrainingPlayersTable from "@/components/trainings/TrainingPlayersTable";
+import TrainingRatingInput from "@/components/trainings/TrainingRatingInput";
+import { attendanceErrorMessage, type AttendanceStatus } from "@/lib/attendance";
+import { ratingErrorMessage } from "@/lib/ratings";
+import { rosterStatus, type RosterPoolEntry } from "@/lib/roster-status";
+import { splitRoster, type SignupEntry } from "@/lib/signups";
+import { buildPlayerRows } from "@/lib/training-players";
+import { unavailableTraining } from "@/lib/training-queries";
+import type { Training } from "@/lib/trainings";
+
+const isDev = import.meta.env.DEV;
+if (!isDev) {
+  Astro.response.status = 404;
+}
+
+const theme = Astro.url.searchParams.get("theme") === "dark" ? "dark" : "light";
+const TRAINING_ID = "00000000-0000-0000-0000-000000000001";
+
+const id = (n: number) => `00000000-0000-0000-0000-0000000000${n.toString(16).padStart(2, "0")}`;
+const player = (n: number, nickname: string): RosterPoolEntry => ({ user_id: id(n), nickname });
+const signup = (p: RosterPoolEntry, position: number): SignupEntry => ({
+  id: `signup-${position}`,
+  user_id: p.user_id,
+  position,
+  nickname: p.nickname,
+});
+
+// 12 main-list players (one per attendance/rating state that matters), 2 on the waitlist, plus
+// blocked and no-response players that are not signed up.
+const mainPlayers = [
+  "Kuba (present, rated)",
+  "Ola (present)",
+  "Marek (unmarked, default 5)",
+  "Ewa (absent, not rated)",
+  "Tomek (unmarked)",
+  "Ania (absent)",
+  "Piotr",
+  "Kasia",
+  "Bartek",
+  "Magda",
+  "Rafal",
+  "Zosia",
+].map((nickname, i) => player(10 + i, nickname));
+const waitlistPlayers = [player(30, "Adam (waitlist)"), player(31, "Basia (waitlist)")];
+const blockedPlayers = [player(40, "Czarek (blocked)"), player(41, "Dorota (blocked)")];
+const noResponsePlayers = [player(50, "Edek (no response)"), player(51, "Fela (no response)")];
+const entries = [...mainPlayers, ...waitlistPlayers].map((p, i) => signup(p, i + 1));
+const pool = [...mainPlayers, ...waitlistPlayers, ...blockedPlayers, ...noResponsePlayers];
+const status = rosterStatus(entries, pool, new Set(blockedPlayers.map((p) => p.user_id)));
+
+const marks = new Map<string, AttendanceStatus>([
+  [mainPlayers[0].user_id, "present"],
+  [mainPlayers[1].user_id, "present"],
+  [mainPlayers[3].user_id, "absent"],
+  [mainPlayers[5].user_id, "absent"],
+]);
+// Absent players have no rating row; unmarked ones keep the seeded 5.
+const ratings = new Map<string, number>(
+  mainPlayers
+    .filter((p) => marks.get(p.user_id) !== "absent")
+    .map((p, i) => [p.user_id, [7.5, 6, 5, 5, 5, 6.5, 8, 4.5, 5, 5][i] ?? 5]),
+);
+
+const playedRows = buildPlayerRows(status, marks, ratings);
+const openRows = buildPlayerRows(status, new Map(), new Map());
+const emptyRows = buildPlayerRows(rosterStatus([], [], new Set()), new Map(), new Map());
+
+const tableStates = [
+  { label: "Played training: all buckets and marks", rows: playedRows, ratable: true, controlsFailed: false },
+  {
+    label: "Not played yet (open or cancelled): no Attendance / Rating",
+    rows: openRows,
+    ratable: false,
+    controlsFailed: false,
+  },
+  {
+    label: "Attendance or ratings failed to load: Player + Training only",
+    rows: playedRows,
+    ratable: true,
+    controlsFailed: true,
+  },
+  { label: "No players", rows: emptyRows, ratable: true, controlsFailed: false },
+];
+
+type SaveState = "idle" | "saving" | "saved" | "error";
+const controlStates: { label: string; seedStatus: SaveState; seedMessage?: string }[] = [
+  { label: "Idle", seedStatus: "idle" },
+  { label: "Saving", seedStatus: "saving" },
+  { label: "Saved", seedStatus: "saved" },
+  { label: "Attendance error", seedStatus: "error", seedMessage: attendanceErrorMessage("save_failed") ?? undefined },
+  {
+    label: "Rating error: absent player",
+    seedStatus: "error",
+    seedMessage: ratingErrorMessage("player_absent") ?? undefined,
+  },
+];
+
+// Blocked sign-up view: an open training where the viewer is blocked (sees the reason, not Sign up).
+const now = new Date("2026-10-01T10:00:00Z");
+const openTraining: Training = {
+  id: TRAINING_ID,
+  title: "Thursday volleyball",
+  starts_at: "2026-10-02T17:00:00Z",
+  location: "SP 12 sports hall",
+  note: null,
+  status: "open",
+};
+const blockedRoster = splitRoster(entries.slice(0, 5));
+---
+
+{isDev && (
+  <Layout title="Kitchen sink: players table" theme={theme}>
+    <main class="flex-1 space-y-8 p-4 sm:p-8">
+      <header class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-2xl font-semibold">Players table kitchen sink ({theme})</h1>
+        <nav class="text-muted-foreground flex gap-3 text-sm">
+          <a class="text-foreground underline underline-offset-4" href="?theme=light">
+            Light
+          </a>
+          <a class="text-foreground underline underline-offset-4" href="?theme=dark">
+            Dark
+          </a>
+        </nav>
+      </header>
+
+      {tableStates.map((state) => (
+        <section class="max-w-4xl space-y-2">
+          <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">{state.label}</h2>
+          <TrainingPlayersTable
+            trainingId={TRAINING_ID}
+            rows={state.rows}
+            ratable={state.ratable}
+            controlsFailed={state.controlsFailed}
+            client:load
+          />
+        </section>
+      ))}
+
+      <section class="space-y-2">
+        <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Controls: transient save states
+        </h2>
+        <ul class="divide-border max-w-md divide-y rounded-xl border p-4">
+          {controlStates.map((state, index) => (
+            <li class="flex items-center justify-between gap-3 py-2">
+              <span class="text-muted-foreground w-28 shrink-0 text-xs">{state.label}</span>
+              {state.label.startsWith("Rating") ? (
+                <TrainingRatingInput
+                  trainingId={TRAINING_ID}
+                  userId={id(60 + index)}
+                  initialRating={null}
+                  disabled={true}
+                  playerLabel="Ewa"
+                  seedStatus={state.seedStatus}
+                  seedMessage={state.seedMessage}
+                  client:load
+                />
+              ) : (
+                <AttendanceToggle
+                  trainingId={TRAINING_ID}
+                  userId={id(60 + index)}
+                  initialStatus={index === 3 ? null : "present"}
+                  playerLabel="Ola"
+                  seedStatus={state.seedStatus}
+                  seedMessage={state.seedMessage}
+                  client:load
+                />
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section class="max-w-md space-y-2">
+        <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Blocked player (sign-up view)</h2>
+        <PlayerTrainingCard
+          training={openTraining}
+          unavailable={unavailableTraining(false)}
+          now={now}
+          roster={blockedRoster}
+          placement={null}
+          userId="00000000-0000-0000-0000-0000000000ff"
+          blocked={true}
+          absences={2}
+        />
+      </section>
+    </main>
+  </Layout>
+)}
