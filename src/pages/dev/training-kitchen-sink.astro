@@ -206,7 +206,7 @@ const states: State[] = [
               <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">{state.label}</h2>
               <PlayerTrainingCard
                 training={state.training}
-                unavailable={unavailableTraining(state.failed ?? false)}
+                unavailable={unavailableTraining(state.failed ?? false, lang)}
                 now={now}
                 isOrganizer={state.organizer ?? false}
                 roster={roster}
@@ -229,7 +229,7 @@ const states: State[] = [
         <div class="max-w-3xl">
           <PlayerTrainingCard
             training={base}
-            unavailable={unavailableTraining(false)}
+            unavailable={unavailableTraining(false, lang)}
             now={now}
             roster={splitRoster(entries(MAIN_LIST_SIZE + 2, { includeMeAt: MAIN_LIST_SIZE + 1 }))}
             placement={placementOf(splitRoster(entries(MAIN_LIST_SIZE + 2, { includeMeAt: MAIN_LIST_SIZE + 1 })), ME)}

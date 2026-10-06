@@ -1,6 +1,7 @@
 // Attendance + no-show lockout rules shared by the organizer attendance island, its API route, the
 // player page and the kitchen-sink. Browser-safe on purpose: no Supabase import, so the islands
 // bundle no secrets (mirrors src/lib/ratings.ts).
+import { t, type Lang } from "@/i18n";
 
 // The lockout window and limit. Mirrored by the SQL in the attendance_and_lockout migration, which
 // is authoritative; these exist for user-facing copy (the block reason) and any client-side checks.
@@ -38,6 +39,6 @@ export function attendanceErrorMessage(code: string | null): string | null {
 
 // FR-010: the reason a blocked player sees on the sign-up page instead of the sign-up button. A late
 // withdrawal counts the same as a no-show, so the copy says "absences", not "no-shows".
-export function blockReason(absences: number): string {
-  return `You can't sign up for this training: ${absences} absences in your last ${ABSENCE_WINDOW} sessions. Sit this one out and you'll be able to sign up again.`;
+export function blockReason(absences: number, lang: Lang): string {
+  return t(lang).signup.blockReason(absences, ABSENCE_WINDOW);
 }

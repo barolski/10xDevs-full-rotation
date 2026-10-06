@@ -1,4 +1,5 @@
 import type { AstroCookies } from "astro";
+import { t, type Lang } from "@/i18n";
 import { createClient } from "@/lib/supabase";
 import { isUuid, TRAINING_COLUMNS, type Training } from "@/lib/trainings";
 
@@ -31,12 +32,9 @@ export async function loadTraining(
 }
 
 // What a page shows when loadTraining returned no training: a temporary failure must not read as "gone".
-export function unavailableTraining(failed: boolean) {
+export function unavailableTraining(failed: boolean, lang: Lang) {
+  const d = t(lang).training.unavailable;
   return failed
-    ? {
-        status: 503,
-        title: "Could not load this training",
-        message: "Something went wrong. Please try again in a moment.",
-      }
-    : { status: 404, title: "Training not found", message: "This training doesn't exist or the link is wrong." };
+    ? { status: 503, title: d.loadFailedTitle, message: d.loadFailedMessage }
+    : { status: 404, title: d.notFoundTitle, message: d.notFoundMessage };
 }

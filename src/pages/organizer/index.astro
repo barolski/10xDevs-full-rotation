@@ -5,18 +5,19 @@ import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CircleCheck, CircleX, DoorOpen, Hourglass } from "lucide-react";
+import { t } from "@/i18n";
 import { createClient } from "@/lib/supabase";
 import { formatTrainingDateTime } from "@/lib/time";
 import {
   TRAINING_COLUMNS,
-  TRAINING_STATUS_BADGE,
+  TRAINING_STATUS_VARIANT,
   trainingDisplayStatus,
   trainingErrorMessage,
   type Training,
   type TrainingDisplayStatus,
 } from "@/lib/trainings";
 
-// One lucide glyph per display status; the label + colour come from TRAINING_STATUS_BADGE.
+// One lucide glyph per display status; the colour comes from TRAINING_STATUS_VARIANT, the label from the dictionary.
 const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
   open: DoorOpen,
   finalizing: Hourglass,
@@ -24,7 +25,9 @@ const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
   cancelled: CircleX,
 };
 
-const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
+const { lang } = Astro.locals;
+const statusLabels = t(lang).training.status;
+const error = trainingErrorMessage(Astro.url.searchParams.get("error"), lang);
 const now = new Date();
 const nowIso = now.toISOString();
 
@@ -96,7 +99,7 @@ const sections = [
                 {items.map((training) => {
                   const startsAt = new Date(training.starts_at);
                   const display = trainingDisplayStatus(training, now);
-                  const badge = TRAINING_STATUS_BADGE[display];
+                  const badgeVariant = TRAINING_STATUS_VARIANT[display];
                   const Icon = STATUS_ICON[display];
                   return (
                     <li>
@@ -107,12 +110,12 @@ const sections = [
                         <span class="min-w-0">
                           <span class="block truncate font-medium">{training.title}</span>
                           <span class="text-muted-foreground block text-sm">
-                            {formatTrainingDateTime(startsAt, Astro.locals.lang)} · {training.location}
+                            {formatTrainingDateTime(startsAt, lang)} · {training.location}
                           </span>
                         </span>
-                        <span class:list={[badgeVariants({ variant: badge.variant })]}>
+                        <span class:list={[badgeVariants({ variant: badgeVariant })]}>
                           <Icon className="size-3.5" aria-hidden="true" />
-                          {badge.label}
+                          {statusLabels[display]}
                         </span>
                       </a>
                     </li>

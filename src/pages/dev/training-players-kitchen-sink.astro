@@ -23,6 +23,7 @@ if (!isDev) {
 }
 
 const theme = Astro.url.searchParams.get("theme") === "dark" ? "dark" : "light";
+const { lang } = Astro.locals;
 const TRAINING_ID = "00000000-0000-0000-0000-000000000001";
 
 const id = (n: number) => `00000000-0000-0000-0000-0000000000${n.toString(16).padStart(2, "0")}`;
@@ -180,18 +181,24 @@ const blockedRoster = splitRoster(entries.slice(0, 5));
         </ul>
       </section>
 
-      <section class="max-w-md space-y-2">
-        <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Blocked player (sign-up view)</h2>
-        <PlayerTrainingCard
-          training={openTraining}
-          unavailable={unavailableTraining(false)}
-          now={now}
-          roster={blockedRoster}
-          placement={null}
-          userId="00000000-0000-0000-0000-0000000000ff"
-          blocked={true}
-          absences={2}
-        />
+      <section class="space-y-2">
+        <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Blocked player (sign-up view): the reason for 1, 2, 5, 12 and 22 absences (Polish plural forms)
+        </h2>
+        <div class="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 5, 12, 22].map((absences) => (
+            <PlayerTrainingCard
+              training={openTraining}
+              unavailable={unavailableTraining(false, lang)}
+              now={now}
+              roster={blockedRoster}
+              placement={null}
+              userId="00000000-0000-0000-0000-0000000000ff"
+              blocked={true}
+              absences={absences}
+            />
+          ))}
+        </div>
       </section>
     </main>
   </Layout>

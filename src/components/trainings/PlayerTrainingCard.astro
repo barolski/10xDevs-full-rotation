@@ -5,17 +5,18 @@ import { CircleCheck, CircleX, DoorOpen, Hourglass } from "lucide-react";
 import SignupPanel from "@/components/trainings/SignupPanel.astro";
 import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { t } from "@/i18n";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Placement, Roster } from "@/lib/signups";
 import {
   isSignupOpen,
-  TRAINING_STATUS_BADGE,
+  TRAINING_STATUS_VARIANT,
   trainingDisplayStatus,
   type Training,
   type TrainingDisplayStatus,
 } from "@/lib/trainings";
 
-// One lucide glyph per display status; the label + colour come from TRAINING_STATUS_BADGE.
+// One lucide glyph per display status; the colour comes from TRAINING_STATUS_VARIANT, the label from the dictionary.
 const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
   open: DoorOpen,
   finalizing: Hourglass,
@@ -56,7 +57,9 @@ const {
 } = Astro.props;
 const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
 const display = training ? trainingDisplayStatus(training, now) : null;
-const badge = display ? TRAINING_STATUS_BADGE[display] : null;
+const dictionary = t(Astro.locals.lang);
+const badgeVariant = display ? TRAINING_STATUS_VARIANT[display] : undefined;
+const badgeLabel = display ? dictionary.training.status[display] : null;
 const StatusIcon = display ? STATUS_ICON[display] : null;
 ---
 
@@ -64,9 +67,9 @@ const StatusIcon = display ? STATUS_ICON[display] : null;
   {training ? (
     <>
       <CardHeader className="gap-3">
-        <span class:list={[badgeVariants({ variant: badge?.variant })]}>
+        <span class:list={[badgeVariants({ variant: badgeVariant })]}>
           {StatusIcon && <StatusIcon className="size-3.5" aria-hidden="true" />}
-          {badge?.label}
+          {badgeLabel}
         </span>
         <CardTitle className="text-2xl leading-tight font-semibold tracking-tight text-balance break-words">
           <h1>{training.title}</h1>
@@ -91,7 +94,7 @@ const StatusIcon = display ? STATUS_ICON[display] : null;
       {isOrganizer && (
         <CardFooter className="border-t">
           <a href={`/organizer/trainings/${training.id}`} class:list={[buttonVariants({ variant: "outline" })]}>
-            Manage
+            {dictionary.signup.manage}
           </a>
         </CardFooter>
       )}

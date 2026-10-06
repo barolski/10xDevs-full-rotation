@@ -3,6 +3,7 @@ import { CalendarClock, MapPin, StickyNote, Type, Save } from "lucide-react";
 import { FormField } from "@/components/form/FormField";
 import { SubmitButton } from "@/components/form/SubmitButton";
 import { ServerError } from "@/components/form/ServerError";
+import type { Lang } from "@/i18n";
 import {
   SIGNUP_CLOSE_HOURS,
   trainingErrorMessage,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/trainings";
 
 interface Props {
+  lang: Lang;
   action: string;
   initial?: TrainingInput;
   serverError?: string | null;
@@ -25,6 +27,7 @@ interface Props {
 const EMPTY: TrainingInput = { title: "", startsAtLocal: "", location: "", note: "" };
 
 export default function TrainingForm({
+  lang,
   action,
   initial = EMPTY,
   serverError,
@@ -58,7 +61,7 @@ export default function TrainingForm({
       e.preventDefault();
       const messages: Partial<Record<TrainingField, string>> = {};
       for (const [field, code] of Object.entries(result.errors)) {
-        messages[field as TrainingField] = trainingErrorMessage(code) ?? undefined;
+        messages[field as TrainingField] = trainingErrorMessage(code, lang) ?? undefined;
       }
       setErrors(messages);
       // Focus after React commits aria-invalid + the error text, so screen readers announce both.

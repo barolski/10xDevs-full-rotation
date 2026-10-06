@@ -1,3 +1,4 @@
+import { t, type Lang } from "@/i18n";
 import { zonedLocalToUtc } from "@/lib/time";
 
 // Sign-ups close this many hours before a training starts. Mirrors `interval '3 hours'` in the
@@ -73,18 +74,15 @@ export function trainingDisplayStatus(
   return isSignupOpen(new Date(training.starts_at), now) ? "open" : "finalizing";
 }
 
-// Label + badge variant per display status, so the list, the detail screen and the player card all
-// read from one source instead of each inventing copy. Every variant is a full -soft/-strong token
-// pair (see badge.tsx), which stays legible in dark mode. Four distinct colours on purpose: `open`
-// (sign-ups running) must not read as `confirmed` (settled) at a glance.
-export const TRAINING_STATUS_BADGE: Record<
-  TrainingDisplayStatus,
-  { label: string; variant: "info" | "warning" | "success" | "destructive" }
-> = {
-  open: { label: "Sign-ups open", variant: "info" },
-  finalizing: { label: "Finalizing", variant: "warning" },
-  confirmed: { label: "Confirmed", variant: "success" },
-  cancelled: { label: "Cancelled", variant: "destructive" },
+// Badge variant per display status; the label is `t(lang).training.status[status]`. The list, the detail
+// screen and the player card all read from here instead of each inventing copy. Every variant is a full
+// -soft/-strong token pair (see badge.tsx), which stays legible in dark mode. Four distinct colours on
+// purpose: `open` (sign-ups running) must not read as `confirmed` (settled) at a glance.
+export const TRAINING_STATUS_VARIANT: Record<TrainingDisplayStatus, "info" | "warning" | "success" | "destructive"> = {
+  open: "info",
+  finalizing: "warning",
+  confirmed: "success",
+  cancelled: "destructive",
 };
 
 export type TrainingField = "title" | "starts_at" | "location" | "note";
@@ -154,23 +152,36 @@ export function trainingInputFromForm(form: FormData): TrainingInput {
   return { title: text("title"), startsAtLocal: text("starts_at"), location: text("location"), note: text("note") };
 }
 
-const MESSAGES: Record<TrainingErrorCode, string> = {
-  missing_title: "Title is required",
-  title_too_long: `Title can be at most ${TITLE_MAX} characters`,
-  missing_location: "Location is required",
-  location_too_long: `Location can be at most ${LOCATION_MAX} characters`,
-  note_too_long: `Note can be at most ${NOTE_MAX} characters`,
-  invalid_start: "Enter a valid start date and time",
-  starts_too_soon: `The training must start more than ${SIGNUP_CLOSE_HOURS} hours from now`,
-  signup_closed: "Sign-ups for this training are closed; it can no longer be edited",
-  not_found: "Training not found",
-  save_failed: "Could not save the training. Please try again.",
-};
+const ERROR_KEYS = {
+  missing_title: "missingTitle",
+  title_too_long: "titleTooLong",
+  missing_location: "missingLocation",
+  location_too_long: "locationTooLong",
+  note_too_long: "noteTooLong",
+  invalid_start: "invalidStart",
+  starts_too_soon: "startsTooSoon",
+  signup_closed: "signupClosed",
+  not_found: "notFound",
+  save_failed: "saveFailed",
+} as const satisfies Record<TrainingErrorCode, string>;
 
 // Unknown codes get a generic message: the `?error=` value is never echoed back.
-export function trainingErrorMessage(code: string | null): string | null {
+export function trainingErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
-  return code in MESSAGES ? MESSAGES[code as TrainingErrorCode] : MESSAGES.save_failed;
+  const errors = t(lang).training.errors;
+  const key = code in ERROR_KEYS ? ERROR_KEYS[code as TrainingErrorCode] : "saveFailed";
+  switch (key) {
+    case "titleTooLong":
+      return errors.titleTooLong(TITLE_MAX);
+    case "locationTooLong":
+      return errors.locationTooLong(LOCATION_MAX);
+    case "noteTooLong":
+      return errors.noteTooLong(NOTE_MAX);
+    case "startsTooSoon":
+      return errors.startsTooSoon(SIGNUP_CLOSE_HOURS);
+    default:
+      return errors[key];
+  }
 }
 
 // The trainings trigger raises these as exception messages.

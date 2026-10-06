@@ -150,10 +150,6 @@ export interface ProfileLoad {
   failed: boolean;
 }
 
-// The failed-vs-absent copy, kept beside the loaders like unavailableTraining() in training-queries.ts,
-// so a temporary failure never reads as "gone" and the two stories cannot drift between views.
-export const ROSTER_UNAVAILABLE = "Could not load who's signed up. Please try again in a moment.";
-
 export function unavailableProfile(failed: boolean, lang: Lang) {
   const { loadFailed, missing } = t(lang).profile.unavailable;
   return failed ? { status: 503, message: loadFailed } : { status: 404, message: missing };

@@ -16,18 +16,19 @@ import { type AttendanceStatus } from "@/lib/attendance";
 import { loadTeams } from "@/lib/team-queries";
 import { MAIN_LIST_SIZE, MIN_CONFIRMED, splitRoster } from "@/lib/signups";
 import type { RosterStatus } from "@/lib/roster-status";
+import { t } from "@/i18n";
 import { buildPlayerRows, PLAYER_BUCKET_BADGE } from "@/lib/training-players";
 import type { AssignedPlayer } from "@/lib/teams";
 import {
   canGenerateTeams,
   canRateTraining,
   isSignupOpen,
-  TRAINING_STATUS_BADGE,
+  TRAINING_STATUS_VARIANT,
   trainingDisplayStatus,
   type TrainingDisplayStatus,
 } from "@/lib/trainings";
 
-// One lucide glyph per display status; the label + colour come from TRAINING_STATUS_BADGE.
+// One lucide glyph per display status; the colour comes from TRAINING_STATUS_VARIANT, the label from the dictionary.
 const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
   open: DoorOpen,
   finalizing: Hourglass,
@@ -37,7 +38,8 @@ const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
 
 const now = new Date();
 const { training, failed } = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
-const unavailable = unavailableTraining(failed);
+const { lang } = Astro.locals;
+const unavailable = unavailableTraining(failed, lang);
 if (!training) {
   Astro.response.status = unavailable.status;
 }
@@ -45,7 +47,8 @@ if (!training) {
 const shareUrl = training ? new URL(`/t/${training.id}`, Astro.url.origin).toString() : "";
 const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
 const display = training ? trainingDisplayStatus(training, now) : null;
-const badge = display ? TRAINING_STATUS_BADGE[display] : null;
+const badgeVariant = display ? TRAINING_STATUS_VARIANT[display] : undefined;
+const badgeLabel = display ? t(lang).training.status[display] : null;
 const StatusIcon = display ? STATUS_ICON[display] : null;
 // A rating is a post-training assessment (see canRateTraining): only a confirmed training that has
 // already started is ratable, and only its main-list players — the waitlist did not play.
@@ -152,9 +155,9 @@ const notice = Astro.url.searchParams.has("created")
           <Card>
             <CardHeader className="gap-3">
               <div class="flex flex-wrap items-center gap-3">
-                <span class:list={[badgeVariants({ variant: badge?.variant })]}>
+                <span class:list={[badgeVariants({ variant: badgeVariant })]}>
                   {StatusIcon && <StatusIcon className="size-3.5" aria-hidden="true" />}
-                  {badge?.label}
+                  {badgeLabel}
                 </span>
                 <span class="text-muted-foreground text-sm">
                   {mainCount ?? "—"} / {MAIN_LIST_SIZE} (min. {MIN_CONFIRMED})

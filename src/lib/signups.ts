@@ -1,6 +1,7 @@
 // Sign-up rules shared by the API routes, the pages and (later) the close/confirm worker.
 // Browser-safe on purpose: no Supabase import here, so the islands that bundle it carry no secrets.
 // Server-only reads live in src/lib/signup-queries.ts, mirroring trainings.ts / training-queries.ts.
+import { t, type Lang } from "@/i18n";
 
 // The main list holds this many players; everyone after them is on the waitlist (FR-007).
 // Mirrors the comment in the signups migration (supabase/migrations/*_signups.sql).
@@ -72,20 +73,22 @@ export type SignupErrorCode =
   | "not_found"
   | "save_failed";
 
-const MESSAGES: Record<SignupErrorCode, string> = {
-  signup_closed: "Sign-ups for this training are closed",
-  already_signed_up: "You are already signed up for this training",
-  overlapping_signup: `You are already signed up for another training starting within ${OVERLAP_WINDOW_MINUTES} minutes of this one`,
-  player_blocked: "You can't sign up for this training",
-  not_signed_up: "You are not signed up for this training",
-  not_found: "Training not found",
-  save_failed: "Something went wrong. Please try again.",
-};
+const ERROR_KEYS = {
+  signup_closed: "signupClosed",
+  already_signed_up: "alreadySignedUp",
+  overlapping_signup: "overlappingSignup",
+  player_blocked: "playerBlocked",
+  not_signed_up: "notSignedUp",
+  not_found: "notFound",
+  save_failed: "saveFailed",
+} as const satisfies Record<SignupErrorCode, string>;
 
 // Unknown codes get the generic message: the `?error=` value is never echoed back.
-export function signupErrorMessage(code: string | null): string | null {
+export function signupErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
-  return code in MESSAGES ? MESSAGES[code as SignupErrorCode] : MESSAGES.save_failed;
+  const errors = t(lang).signup.errors;
+  const key = code in ERROR_KEYS ? ERROR_KEYS[code as SignupErrorCode] : "saveFailed";
+  return key === "overlappingSignup" ? errors.overlappingSignup(OVERLAP_WINDOW_MINUTES) : errors[key];
 }
 
 // The signups triggers raise these as exception messages; a duplicate is caught by the partial

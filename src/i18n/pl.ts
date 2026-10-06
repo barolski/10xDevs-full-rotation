@@ -173,6 +173,76 @@ export const pl = {
     organizer: "Organizator: treningi",
     signOut: "Wyloguj się",
   },
+  training: {
+    status: {
+      open: "Zapisy otwarte",
+      finalizing: "Finalizacja",
+      confirmed: "Potwierdzony",
+      cancelled: "Odwołany",
+    },
+    unavailable: {
+      loadFailedTitle: "Nie udało się wczytać tego treningu",
+      loadFailedMessage: "Coś poszło nie tak. Spróbuj ponownie za chwilę.",
+      notFoundTitle: "Nie znaleziono treningu",
+      notFoundMessage: "Ten trening nie istnieje albo link jest błędny.",
+    },
+    details: {
+      start: "Start",
+      location: "Miejsce",
+      note: "Notatka",
+      signups: "Zapisy",
+      signupsOpenUntil: (when: string) => `Zapisy otwarte do ${when}`,
+      signupsClosed: "Zapisy są zamknięte",
+    },
+    errors: {
+      missingTitle: "Podaj tytuł",
+      titleTooLong: (max: number) =>
+        `Tytuł może mieć najwyżej ${max} ${plural("pl", max, { one: "znak", few: "znaki", many: "znaków", other: "znaku" })}`,
+      missingLocation: "Podaj miejsce",
+      locationTooLong: (max: number) =>
+        `Miejsce może mieć najwyżej ${max} ${plural("pl", max, { one: "znak", few: "znaki", many: "znaków", other: "znaku" })}`,
+      noteTooLong: (max: number) =>
+        `Notatka może mieć najwyżej ${max} ${plural("pl", max, { one: "znak", few: "znaki", many: "znaków", other: "znaku" })}`,
+      invalidStart: "Podaj poprawną datę i godzinę rozpoczęcia",
+      startsTooSoon: (hours: number) =>
+        `Trening musi zaczynać się za więcej niż ${hours} ${plural("pl", hours, { one: "godzinę", few: "godziny", many: "godzin", other: "godziny" })} od teraz`,
+      signupClosed: "Zapisy na ten trening są zamknięte; nie można go już edytować",
+      notFound: "Nie znaleziono treningu",
+      saveFailed: "Nie udało się zapisać treningu. Spróbuj ponownie.",
+    },
+  },
+  signup: {
+    notice: {
+      signedUp: "Zapis przyjęty.",
+      withdrawn: "Zapis wycofany.",
+    },
+    mainList: "Lista główna",
+    waitlist: "Lista rezerwowa",
+    youAreIn: "Jesteś na liście.",
+    youWillMoveUp: "Awansujesz, jeśli ktoś się wypisze.",
+    spotsLeft: (free: number, size: number) => `Wolne miejsca na liście głównej: ${free} z ${size}.`,
+    mainFull: "Lista główna jest pełna — zapis teraz oznacza miejsce na liście rezerwowej.",
+    signUp: "Zapisz się",
+    withdraw: "Wypisz się",
+    lateWithdrawNote: "Zapisy są zamknięte. Wypisanie się teraz może zostać policzone jako nieobecność.",
+    emptyMain: "Nikt się jeszcze nie zapisał.",
+    emptyWaitlist: "Nikt nie czeka.",
+    you: "ty",
+    manage: "Zarządzaj",
+    rosterUnavailable: "Nie udało się wczytać listy zapisanych. Spróbuj ponownie za chwilę.",
+    blockReason: (absences: number, window: number) =>
+      `Nie możesz zapisać się na ten trening: ${absences} ${plural("pl", absences, { one: "nieobecność", few: "nieobecności", many: "nieobecności", other: "nieobecności" })} w ostatnich ${window} treningach. Odpuść ten trening, a znowu będzie można się zapisać.`,
+    errors: {
+      signupClosed: "Zapisy na ten trening są zamknięte",
+      alreadySignedUp: "Masz już zapis na ten trening",
+      overlappingSignup: (minutes: number) =>
+        `Masz już zapis na inny trening zaczynający się w ciągu ${minutes} ${plural("pl", minutes, { one: "minuty", few: "minut", many: "minut", other: "minuty" })} od tego`,
+      playerBlocked: "Nie możesz zapisać się na ten trening",
+      notSignedUp: "Nie masz zapisu na ten trening",
+      notFound: "Nie znaleziono treningu",
+      saveFailed: "Coś poszło nie tak. Spróbuj ponownie.",
+    },
+  },
   forbidden: {
     title: "Tylko dla organizatorów",
     description: "Ta część jest dostępna tylko dla kont organizatorów.",

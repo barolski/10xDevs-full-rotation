@@ -8,14 +8,15 @@ import { utcToZonedLocalInput } from "@/lib/time";
 import { isSignupOpen, trainingErrorMessage } from "@/lib/trainings";
 
 const { training, failed } = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
-const unavailable = unavailableTraining(failed);
+const { lang } = Astro.locals;
+const unavailable = unavailableTraining(failed, lang);
 if (!training) {
   Astro.response.status = unavailable.status;
 }
 
 const startsAt = training ? new Date(training.starts_at) : null;
 const open = startsAt ? isSignupOpen(startsAt, new Date()) : false;
-const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
+const error = trainingErrorMessage(Astro.url.searchParams.get("error"), lang);
 ---
 
 <Layout title={training ? `Edit: ${training.title}` : unavailable.title}>
@@ -32,6 +33,7 @@ const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
             <p class="text-muted-foreground text-sm">{unavailable.message}</p>
           ) : open ? (
             <TrainingForm
+              lang={lang}
               action={`/api/organizer/trainings/${training.id}`}
               initial={{
                 title: training.title,
@@ -47,7 +49,7 @@ const error = trainingErrorMessage(Astro.url.searchParams.get("error"));
             />
           ) : (
             <Alert>
-              <AlertDescription>{trainingErrorMessage("signup_closed")}</AlertDescription>
+              <AlertDescription>{trainingErrorMessage("signup_closed", lang)}</AlertDescription>
             </Alert>
           )}
         </CardContent>
