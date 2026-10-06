@@ -89,18 +89,20 @@ if (training) {
     rosterStatus = statusLoad.status;
 
     if (ratable) {
+      const attendanceLoad = await loadAttendance(training.id, Astro.request.headers, Astro.cookies);
+      attendanceFailed = attendanceLoad.failed;
+      attendanceMarks = attendanceLoad.marks;
+
+      // Absent players are not rated (their rating row is deleted when they are marked absent), so
+      // they are not seeded with a default either. If attendance failed, no one is skipped.
       const ratingLoad = await loadOrSeedTrainingRatings(
         training.id,
-        roster.main.map((entry) => entry.user_id),
+        roster.main.map((entry) => entry.user_id).filter((userId) => attendanceMarks.get(userId) !== "absent"),
         Astro.request.headers,
         Astro.cookies,
       );
       ratingsFailed = ratingLoad.failed;
       ratings = ratingLoad.ratings;
-
-      const attendanceLoad = await loadAttendance(training.id, Astro.request.headers, Astro.cookies);
-      attendanceFailed = attendanceLoad.failed;
-      attendanceMarks = attendanceLoad.marks;
     }
   }
 }
