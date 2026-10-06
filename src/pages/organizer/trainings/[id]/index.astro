@@ -89,10 +89,14 @@ if (training) {
       attendanceMarks = attendanceLoad.marks;
 
       // Absent players are not rated (their rating row is deleted when they are marked absent), so
-      // they are not seeded with a default either. If attendance failed, no one is skipped.
+      // they are not seeded with a default either. If attendance failed we do not know who is absent,
+      // so nothing is seeded (an empty list only reads the existing ratings); the page shows the
+      // load-failure alert instead.
       const ratingLoad = await loadOrSeedTrainingRatings(
         training.id,
-        roster.main.map((entry) => entry.user_id).filter((userId) => attendanceMarks.get(userId) !== "absent"),
+        attendanceFailed
+          ? []
+          : roster.main.map((entry) => entry.user_id).filter((userId) => attendanceMarks.get(userId) !== "absent"),
         Astro.request.headers,
         Astro.cookies,
       );
