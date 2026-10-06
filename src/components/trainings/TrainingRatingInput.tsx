@@ -16,6 +16,8 @@ interface Props {
   // Dev/kitchen-sink only: force a transient status that can't be produced statically.
   seedStatus?: Status;
   seedMessage?: string;
+  // An absent player is not rated: the input stays visible but cannot be edited.
+  disabled?: boolean;
 }
 
 export default function TrainingRatingInput({
@@ -25,8 +27,10 @@ export default function TrainingRatingInput({
   playerLabel,
   seedStatus = "idle",
   seedMessage,
+  disabled = false,
 }: Props) {
-  const [value, setValue] = useState<string>(String(initialRating ?? RATING_DEFAULT));
+  // A disabled (absent) input shows an empty placeholder, never a number that is not saved anywhere.
+  const [value, setValue] = useState<string>(disabled ? "" : String(initialRating ?? RATING_DEFAULT));
   const [savedRating, setSavedRating] = useState<number | null>(initialRating);
   const [status, setStatus] = useState<Status>(seedStatus);
   const [message, setMessage] = useState<string | null>(seedMessage ?? null);
@@ -76,6 +80,8 @@ export default function TrainingRatingInput({
           max={RATING_MAX}
           step={RATING_STEP}
           value={value}
+          disabled={disabled}
+          placeholder="—"
           aria-label={playerLabel ? `Rating for ${playerLabel}` : "Rating"}
           aria-invalid={status === "error" ? true : undefined}
           className="h-8 w-20 text-sm"
