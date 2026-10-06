@@ -16,6 +16,7 @@ if (!isDev) {
 }
 
 const theme = Astro.url.searchParams.get("theme") === "dark" ? "dark" : "light";
+const { lang } = Astro.locals;
 
 interface State {
   label: string;
@@ -92,10 +93,11 @@ const states: State[] = [
                   </Alert>
                 )}
                 <ProfileForm
+                  lang={lang}
                   initialNickname={state.nickname}
                   initialPrimary={state.primary ?? null}
                   initialSecondary={state.secondary ?? null}
-                  serverError={profileErrorMessage(state.error ?? null)}
+                  serverError={profileErrorMessage(state.error ?? null, lang)}
                   client:load
                 />
               </CardContent>

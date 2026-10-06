@@ -3,15 +3,20 @@ import { FormField } from "@/components/form/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/form/SubmitButton";
 import { ServerError } from "@/components/form/ServerError";
+import { t, type Lang } from "@/i18n";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 const MIN_PASSWORD_LENGTH = 6;
 
 interface Props {
+  lang: Lang;
+  // The error *code* from the redirect (e.g. "user_already_exists"); shown as a message in `lang`.
   serverError?: string | null;
   next?: string | null;
 }
 
-export default function SignUpForm({ serverError, next: nextPath }: Props) {
+export default function SignUpForm({ lang, serverError, next: nextPath }: Props) {
+  const d = t(lang).auth;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -24,21 +29,21 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
     const next: typeof errors = {};
 
     if (!email.trim()) {
-      next.email = "Email is required";
+      next.email = d.validation.emailRequired;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      next.email = "Enter a valid email address";
+      next.email = d.validation.emailInvalid;
     }
 
     if (!password) {
-      next.password = "Password is required";
+      next.password = d.validation.passwordRequired;
     } else if (password.length < MIN_PASSWORD_LENGTH) {
-      next.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+      next.password = d.validation.passwordTooShort(MIN_PASSWORD_LENGTH);
     }
 
     if (!confirmPassword) {
-      next.confirmPassword = "Please confirm your password";
+      next.confirmPassword = d.validation.confirmRequired;
     } else if (password !== confirmPassword) {
-      next.confirmPassword = "Passwords do not match";
+      next.confirmPassword = d.validation.passwordsDiffer;
     }
 
     setErrors(next);
@@ -77,9 +82,7 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
 
   const remaining = MIN_PASSWORD_LENGTH - password.length;
   const passwordHint =
-    !errors.password && password.length > 0 && remaining > 0
-      ? `${remaining} more character${remaining !== 1 ? "s" : ""} needed`
-      : undefined;
+    !errors.password && password.length > 0 && remaining > 0 ? d.validation.passwordMoreNeeded(remaining) : undefined;
 
   return (
     <form method="POST" action="/api/auth/signup" className="space-y-4" onSubmit={handleSubmit} noValidate>
@@ -87,7 +90,7 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
       <FormField
         id="email"
         type="email"
-        label="Email Address"
+        label={d.fields.email}
         inlineLabel
         value={email}
         onChange={(v) => {
@@ -99,7 +102,7 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
 
       <FormField
         id="password"
-        label="Password"
+        label={d.fields.password}
         inlineLabel
         type={showPassword ? "text" : "password"}
         value={password}
@@ -111,6 +114,7 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
         hint={passwordHint}
         endContent={
           <PasswordToggle
+            lang={lang}
             visible={showPassword}
             onToggle={() => {
               setShowPassword(!showPassword);
@@ -122,7 +126,7 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
       <FormField
         id="confirmPassword"
         name="confirmPassword"
-        label="Confirm Password"
+        label={d.fields.confirmPassword}
         inlineLabel
         type={showConfirmPassword ? "text" : "password"}
         value={confirmPassword}
@@ -133,6 +137,7 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
         error={errors.confirmPassword}
         endContent={
           <PasswordToggle
+            lang={lang}
             visible={showConfirmPassword}
             onToggle={() => {
               setShowConfirmPassword(!showConfirmPassword);
@@ -141,11 +146,11 @@ export default function SignUpForm({ serverError, next: nextPath }: Props) {
         }
       />
 
-      <ServerError message={serverError} />
+      <ServerError message={authErrorMessage(serverError, lang)} />
 
       <div className="pt-2">
-        <SubmitButton pending={submitting} pendingText="Creating account...">
-          Create account
+        <SubmitButton pending={submitting} pendingText={d.signUp.pending}>
+          {d.signUp.submit}
         </SubmitButton>
       </div>
     </form>

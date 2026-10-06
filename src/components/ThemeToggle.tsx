@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { Moon, Sun, type LucideIcon } from "lucide-react";
+import { t, type Lang } from "@/i18n";
 import { cn } from "@/lib/utils";
 import {
   getServerThemePreference,
@@ -9,12 +10,13 @@ import {
   subscribeThemePreference,
 } from "@/lib/theme";
 
-const OPTIONS: { value: "light" | "dark"; label: string; Icon: LucideIcon }[] = [
-  { value: "light", label: "Light", Icon: Sun },
-  { value: "dark", label: "Dark", Icon: Moon },
+const OPTIONS: { value: "light" | "dark"; Icon: LucideIcon }[] = [
+  { value: "light", Icon: Sun },
+  { value: "dark", Icon: Moon },
 ];
 
 interface Props {
+  lang: Lang;
   // Icons only (each option keeps its accessible name); for the header bar on signed-out pages.
   compact?: boolean;
   // Plain text rows for the account menu.
@@ -26,7 +28,8 @@ interface Props {
 // this island reflects it through the shared store in src/lib/theme.ts (in sync across toggles and tabs)
 // and saves changes. With no stored choice the page follows the OS, so the active option shows the theme
 // that is currently applied.
-export default function ThemeToggle({ compact = false, menu = false, className }: Props) {
+export default function ThemeToggle({ lang, compact = false, menu = false, className }: Props) {
+  const d = t(lang).theme;
   // null during SSR/hydration: no option is shown as checked until the stored choice is known.
   const preference = useSyncExternalStore(
     subscribeThemePreference,
@@ -37,8 +40,9 @@ export default function ThemeToggle({ compact = false, menu = false, className }
 
   if (menu) {
     return (
-      <div role="group" aria-label="Colour theme" className={cn("flex flex-col gap-0.5", className)}>
-        {OPTIONS.map(({ value, label }) => {
+      <div role="group" aria-label={d.group} className={cn("flex flex-col gap-0.5", className)}>
+        {OPTIONS.map(({ value }) => {
+          const label = d[value];
           const checked = shown === value;
           return (
             <button
@@ -64,10 +68,11 @@ export default function ThemeToggle({ compact = false, menu = false, className }
   return (
     <div
       role="group"
-      aria-label="Colour theme"
+      aria-label={d.group}
       className={cn("bg-muted inline-flex gap-0.5 rounded-lg border p-0.5", className)}
     >
-      {OPTIONS.map(({ value, label, Icon }) => {
+      {OPTIONS.map(({ value, Icon }) => {
+        const label = d[value];
         const checked = shown === value;
         return (
           <button

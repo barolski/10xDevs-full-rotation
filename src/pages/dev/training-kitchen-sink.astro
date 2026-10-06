@@ -17,6 +17,7 @@ if (!isDev) {
 }
 
 const theme = Astro.url.searchParams.get("theme") === "dark" ? "dark" : "light";
+const { lang } = Astro.locals;
 
 // Fixed clock so the open/closed states don't drift: Thu 1 Oct 2026, 12:00 Warsaw.
 const now = new Date("2026-10-01T10:00:00Z");
@@ -193,8 +194,8 @@ const states: State[] = [
       <section class="space-y-3">
         <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Theme toggle (full, compact)</h2>
         <div class="flex flex-wrap items-center gap-3">
-          <ThemeToggle client:load />
-          <ThemeToggle compact client:load />
+          <ThemeToggle lang={lang} client:load />
+          <ThemeToggle lang={lang} compact client:load />
         </div>
       </section>
       <div class="grid items-start gap-6 md:grid-cols-2 xl:grid-cols-3">

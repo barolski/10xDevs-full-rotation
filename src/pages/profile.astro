@@ -6,42 +6,45 @@ import Layout from "@/layouts/Layout.astro";
 import ProfileForm from "@/components/profile/ProfileForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { t } from "@/i18n";
 import { loadProfile, unavailableProfile } from "@/lib/signup-queries";
 import { profileErrorMessage } from "@/lib/profiles";
 
-const { user } = Astro.locals;
+const { user, lang } = Astro.locals;
+const d = t(lang);
 // Middleware guarantees a session on /profile; loadProfile guards the id if that ever changes.
 const { profile, failed } = await loadProfile(user?.id, Astro.request.headers, Astro.cookies);
-const unavailable = unavailableProfile(failed);
+const unavailable = unavailableProfile(failed, lang);
 if (!profile) {
   Astro.response.status = unavailable.status;
 }
 
 const params = Astro.url.searchParams;
 const saved = params.has("saved");
-const error = profileErrorMessage(params.get("error"));
+const error = profileErrorMessage(params.get("error"), lang);
 ---
 
-<Layout title="Your profile">
+<Layout title={d.profile.pageTitle}>
   <main class="mx-auto w-full max-w-md flex-1 p-4 sm:pt-8">
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">
-          <h1>Your profile</h1>
+          <h1>{d.profile.heading}</h1>
         </CardTitle>
         <CardDescription>
-          Signed in as <span class="text-foreground font-medium break-all">{user?.email}</span>
+          {d.common.signedInAs} <span class="text-foreground font-medium break-all">{user?.email}</span>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {saved && !error && (
           <Alert>
             <CircleCheck />
-            <AlertDescription>Profile saved.</AlertDescription>
+            <AlertDescription>{d.profile.saved}</AlertDescription>
           </Alert>
         )}
         {profile ? (
           <ProfileForm
+            lang={lang}
             initialNickname={profile.nickname}
             initialPrimary={profile.primary_position}
             initialSecondary={profile.secondary_position}

@@ -11,7 +11,7 @@ import {
   type AssignedPlayer,
   type TeamId,
 } from "@/lib/teams";
-import { POSITION_LABELS, rosterLabel } from "@/lib/profiles";
+import { positionLabel, rosterLabel } from "@/lib/profiles";
 
 // The organizer-only team split (S-06). Rendered server-side from persisted assignments;
 // GenerateTeamsButton POSTs to the teams route and reloads so this re-renders with the new split.
@@ -25,6 +25,7 @@ interface Props {
 }
 
 const { trainingId, assignments, failed, canGenerate } = Astro.props;
+const { lang } = Astro.locals;
 const hasTeams = assignments.length > 0;
 const emptyNote = canGenerate
   ? "No teams yet — generate them from the confirmed roster."
@@ -82,7 +83,7 @@ const imbalanceWarning = teamsImbalanceWarning(Math.max(0, Math.round((avgDiff -
                     <span class="flex min-w-0 flex-col">
                       <span class="min-w-0 break-words text-sm">{rosterLabel(player)}</span>
                       {player.primaryPosition && (
-                        <span class="text-muted-foreground text-xs">{POSITION_LABELS[player.primaryPosition]}</span>
+                        <span class="text-muted-foreground text-xs">{positionLabel(player.primaryPosition, lang)}</span>
                       )}
                     </span>
                     <span class="flex shrink-0 items-center gap-2">

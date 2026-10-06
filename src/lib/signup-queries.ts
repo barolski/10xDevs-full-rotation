@@ -1,5 +1,6 @@
 import type { AstroCookies } from "astro";
 import { createClient } from "@/lib/supabase";
+import { t, type Lang } from "@/i18n";
 import { PROFILE_COLUMNS, type Profile } from "@/lib/profiles";
 import { RATING_DEFAULT } from "@/lib/ratings";
 import type { SignupEntry } from "@/lib/signups";
@@ -153,10 +154,9 @@ export interface ProfileLoad {
 // so a temporary failure never reads as "gone" and the two stories cannot drift between views.
 export const ROSTER_UNAVAILABLE = "Could not load who's signed up. Please try again in a moment.";
 
-export function unavailableProfile(failed: boolean) {
-  return failed
-    ? { status: 503, message: "Could not load your profile. Please try again in a moment." }
-    : { status: 404, message: "Your profile is missing. Sign out and back in, then try again." };
+export function unavailableProfile(failed: boolean, lang: Lang) {
+  const { loadFailed, missing } = t(lang).profile.unavailable;
+  return failed ? { status: 503, message: loadFailed } : { status: 404, message: missing };
 }
 
 // Takes `string | undefined` and guards like loadTraining: an empty id would reach PostgREST as
