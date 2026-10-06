@@ -169,7 +169,7 @@ const ERROR_KEYS = {
 export function trainingErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
   const errors = t(lang).training.errors;
-  const key = code in ERROR_KEYS ? ERROR_KEYS[code as TrainingErrorCode] : "saveFailed";
+  const key = Object.hasOwn(ERROR_KEYS, code) ? ERROR_KEYS[code as TrainingErrorCode] : "saveFailed";
   switch (key) {
     case "titleTooLong":
       return errors.titleTooLong(TITLE_MAX);

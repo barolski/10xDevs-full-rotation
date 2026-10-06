@@ -96,7 +96,7 @@ const ERROR_KEYS = {
 export function profileErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
   const errors = t(lang).profile.errors;
-  const key = code in ERROR_KEYS ? ERROR_KEYS[code as ProfileErrorCode] : "saveFailed";
+  const key = Object.hasOwn(ERROR_KEYS, code) ? ERROR_KEYS[code as ProfileErrorCode] : "saveFailed";
   return key === "nicknameTooLong" ? errors.nicknameTooLong(NICKNAME_MAX) : errors[key];
 }
 

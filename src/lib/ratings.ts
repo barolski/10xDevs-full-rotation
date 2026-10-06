@@ -44,6 +44,6 @@ const ERROR_KEYS = {
 export function ratingErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
   const errors = t(lang).organizer.ratings.errors;
-  const key = code in ERROR_KEYS ? ERROR_KEYS[code as RatingErrorCode] : "saveFailed";
+  const key = Object.hasOwn(ERROR_KEYS, code) ? ERROR_KEYS[code as RatingErrorCode] : "saveFailed";
   return key === "invalidRating" ? errors.invalidRating(RATING_MIN, RATING_MAX, RATING_STEP) : errors[key];
 }

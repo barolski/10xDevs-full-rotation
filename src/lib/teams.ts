@@ -294,7 +294,7 @@ const ERROR_KEYS = {
 // Unknown codes get the generic message: the server's error code is never echoed back verbatim.
 export function teamsErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
-  const key = code in ERROR_KEYS ? ERROR_KEYS[code as TeamsErrorCode] : "saveFailed";
+  const key = Object.hasOwn(ERROR_KEYS, code) ? ERROR_KEYS[code as TeamsErrorCode] : "saveFailed";
   return t(lang).organizer.teams.errors[key];
 }
 
