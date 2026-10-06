@@ -26,7 +26,9 @@ const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
 };
 
 const { lang } = Astro.locals;
-const statusLabels = t(lang).training.status;
+const dictionary = t(lang);
+const statusLabels = dictionary.training.status;
+const d = dictionary.organizer.index;
 const error = trainingErrorMessage(Astro.url.searchParams.get("error"), lang);
 const now = new Date();
 const nowIso = now.toISOString();
@@ -58,18 +60,18 @@ if (supabase) {
 }
 
 const sections = [
-  { heading: "Upcoming", items: upcoming, empty: "No upcoming trainings yet." },
-  { heading: "Past", items: past, empty: "No past trainings." },
+  { heading: d.upcoming, items: upcoming, empty: d.noUpcoming },
+  { heading: d.past, items: past, empty: d.noPast },
 ];
 ---
 
-<Layout title="Trainings">
+<Layout title={d.pageTitle}>
   <main class="flex-1 p-4 sm:p-8">
     <div class="mx-auto w-full max-w-2xl space-y-6">
       <header class="flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-2xl font-semibold">Trainings</h1>
+        <h1 class="text-2xl font-semibold">{d.heading}</h1>
         <a href="/organizer/trainings/new" class:list={[buttonVariants()]}>
-          New training
+          {d.newTraining}
         </a>
       </header>
 
@@ -80,7 +82,7 @@ const sections = [
       )}
       {loadFailed && (
         <Alert variant="destructive">
-          <AlertDescription>Could not load trainings. Please refresh the page.</AlertDescription>
+          <AlertDescription>{d.loadFailed}</AlertDescription>
         </Alert>
       )}
 

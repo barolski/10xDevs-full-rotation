@@ -19,15 +19,13 @@ export interface PlayerRow {
   rating: number | null;
 }
 
-// Each bucket is a word, not only a colour; the variants are existing badge status token pairs.
-export const PLAYER_BUCKET_BADGE: Record<
-  PlayerBucket,
-  { label: string; variant: "success" | "info" | "destructive" | "secondary" }
-> = {
-  main: { label: "Signed up", variant: "success" },
-  waitlist: { label: "Waitlist", variant: "info" },
-  blocked: { label: "Blocked", variant: "destructive" },
-  noResponse: { label: "No response", variant: "secondary" },
+// Each bucket is a word, not only a colour: the label is `t(lang).organizer.players.buckets[bucket]`;
+// the variants are existing badge status token pairs.
+export const PLAYER_BUCKET_VARIANT: Record<PlayerBucket, "success" | "info" | "destructive" | "secondary"> = {
+  main: "success",
+  waitlist: "info",
+  blocked: "destructive",
+  noResponse: "secondary",
 };
 
 // Order: main (queue order), waitlist (queue order), then blocked and no response (already sorted by

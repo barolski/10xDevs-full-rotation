@@ -17,7 +17,7 @@ import { loadTeams } from "@/lib/team-queries";
 import { MAIN_LIST_SIZE, MIN_CONFIRMED, splitRoster } from "@/lib/signups";
 import type { RosterStatus } from "@/lib/roster-status";
 import { t } from "@/i18n";
-import { buildPlayerRows, PLAYER_BUCKET_BADGE } from "@/lib/training-players";
+import { buildPlayerRows, PLAYER_BUCKET_VARIANT } from "@/lib/training-players";
 import type { AssignedPlayer } from "@/lib/teams";
 import {
   canGenerateTeams,
@@ -39,6 +39,8 @@ const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
 const now = new Date();
 const { training, failed } = await loadTraining(Astro.params.id, Astro.request.headers, Astro.cookies);
 const { lang } = Astro.locals;
+const dictionary = t(lang);
+const d = dictionary.organizer.training;
 const unavailable = unavailableTraining(failed, lang);
 if (!training) {
   Astro.response.status = unavailable.status;
@@ -48,7 +50,7 @@ const shareUrl = training ? new URL(`/t/${training.id}`, Astro.url.origin).toStr
 const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
 const display = training ? trainingDisplayStatus(training, now) : null;
 const badgeVariant = display ? TRAINING_STATUS_VARIANT[display] : undefined;
-const badgeLabel = display ? t(lang).training.status[display] : null;
+const badgeLabel = display ? dictionary.training.status[display] : null;
 const StatusIcon = display ? STATUS_ICON[display] : null;
 // A rating is a post-training assessment (see canRateTraining): only a confirmed training that has
 // already started is ratable, and only its main-list players — the waitlist did not play.
@@ -124,21 +126,34 @@ const playerRows = rosterStatus ? buildPlayerRows(rosterStatus, attendanceMarks,
 // Counts above the table, coloured like the Training badges in its rows so the two read together.
 const playerCounts = rosterStatus
   ? [
-      { ...PLAYER_BUCKET_BADGE.main, label: "Main list", value: `${rosterStatus.main.length} / ${MAIN_LIST_SIZE}` },
-      { ...PLAYER_BUCKET_BADGE.waitlist, value: String(rosterStatus.waitlist.length) },
-      { ...PLAYER_BUCKET_BADGE.blocked, value: String(rosterStatus.blocked.length) },
-      { ...PLAYER_BUCKET_BADGE.noResponse, value: String(rosterStatus.noResponse.length) },
+      {
+        variant: PLAYER_BUCKET_VARIANT.main,
+        label: dictionary.signup.mainList,
+        value: `${rosterStatus.main.length} / ${MAIN_LIST_SIZE}`,
+      },
+      {
+        variant: PLAYER_BUCKET_VARIANT.waitlist,
+        label: dictionary.organizer.players.buckets.waitlist,
+        value: String(rosterStatus.waitlist.length),
+      },
+      {
+        variant: PLAYER_BUCKET_VARIANT.blocked,
+        label: dictionary.organizer.players.buckets.blocked,
+        value: String(rosterStatus.blocked.length),
+      },
+      {
+        variant: PLAYER_BUCKET_VARIANT.noResponse,
+        label: dictionary.organizer.players.buckets.noResponse,
+        value: String(rosterStatus.noResponse.length),
+      },
     ]
   : [];
 const controlsFailed = ratable && (attendanceFailed || ratingsFailed);
-const ratingNote =
-  display === "cancelled"
-    ? "This training was cancelled — there are no ratings."
-    : "Player ratings open once the training has taken place.";
+const ratingNote = display === "cancelled" ? d.cancelledNoRatings : d.ratingsNotOpen;
 const notice = Astro.url.searchParams.has("created")
-  ? "Training created. Copy the link and share it with the group."
+  ? d.notice.created
   : Astro.url.searchParams.has("updated")
-    ? "Training updated."
+    ? d.notice.updated
     : null;
 ---
 
@@ -160,7 +175,7 @@ const notice = Astro.url.searchParams.has("created")
                   {badgeLabel}
                 </span>
                 <span class="text-muted-foreground text-sm">
-                  {mainCount ?? "—"} / {MAIN_LIST_SIZE} (min. {MIN_CONFIRMED})
+                  {d.capacity(String(mainCount ?? "—"), MAIN_LIST_SIZE, MIN_CONFIRMED)}
                 </span>
               </div>
               <CardTitle className="text-2xl">
@@ -170,18 +185,18 @@ const notice = Astro.url.searchParams.has("created")
             <CardContent className="space-y-6">
               <TrainingDetails training={training} now={now} />
               <section class="space-y-2">
-                <h2 class="text-sm font-medium">Sign-up link</h2>
-                <CopyLinkButton url={shareUrl} client:load />
+                <h2 class="text-sm font-medium">{d.signupLink}</h2>
+                <CopyLinkButton lang={lang} url={shareUrl} client:load />
               </section>
               <section class="space-y-3">
-                <h2 class="text-sm font-medium">Players</h2>
+                <h2 class="text-sm font-medium">{d.players}</h2>
                 {rosterStatusFailed || !rosterStatus ? (
                   <Alert variant="destructive">
-                    <AlertDescription>Could not load the players. Please refresh the page.</AlertDescription>
+                    <AlertDescription>{d.playersLoadFailed}</AlertDescription>
                   </Alert>
                 ) : (
                   <>
-                    <ul class="flex flex-wrap gap-2" aria-label="Players by status">
+                    <ul class="flex flex-wrap gap-2" aria-label={d.playersByStatus}>
                       {playerCounts.map((count) => (
                         <li class:list={[badgeVariants({ variant: count.variant }), "tabular-nums"]}>
                           {count.label} {count.value}
@@ -191,12 +206,11 @@ const notice = Astro.url.searchParams.has("created")
                     {!ratable && <p class="text-muted-foreground text-sm">{ratingNote}</p>}
                     {controlsFailed && (
                       <Alert variant="destructive">
-                        <AlertDescription>
-                          Could not load attendance and ratings. Please refresh the page.
-                        </AlertDescription>
+                        <AlertDescription>{d.controlsLoadFailed}</AlertDescription>
                       </Alert>
                     )}
                     <TrainingPlayersTable
+                      lang={lang}
                       trainingId={training.id}
                       rows={playerRows}
                       ratable={ratable}
@@ -221,11 +235,11 @@ const notice = Astro.url.searchParams.has("created")
                   href={`/organizer/trainings/${training.id}/edit`}
                   class:list={[buttonVariants({ variant: "outline" })]}
                 >
-                  Edit
+                  {d.edit}
                 </a>
               )}
               <a href={`/t/${training.id}`} class:list={[buttonVariants()]}>
-                Open player view
+                {d.openPlayerView}
               </a>
             </CardFooter>
           </Card>

@@ -1,6 +1,7 @@
 // Rating rules shared by the organizer rating island and its API route.
 // Browser-safe on purpose: no Supabase import, so the island bundles no secrets
 // (mirrors src/lib/signups.ts vs src/lib/signup-queries.ts).
+import { t, type Lang } from "@/i18n";
 
 // numeric(3,1) in the training_ratings migration, 1.0-10.0. An unrated player is
 // treated as RATING_DEFAULT rather than a missing value, so S-06 never handles "no rating".
@@ -29,18 +30,20 @@ export function validateRating(raw: unknown): RatingValidation {
   return { ok: true, value };
 }
 
-const MESSAGES: Record<RatingErrorCode, string> = {
-  invalid_rating: `Rating must be ${RATING_MIN}-${RATING_MAX} in steps of ${RATING_STEP}`,
-  invalid_request: "Something went wrong. Please try again.",
-  not_ratable: "Ratings open only after the training has taken place",
-  not_on_main_list: "Only main-list players can be rated",
-  player_absent: "This player was marked absent and cannot be rated",
-  not_found: "That player or training no longer exists",
-  save_failed: "Could not save the rating. Please try again.",
-};
+const ERROR_KEYS = {
+  invalid_rating: "invalidRating",
+  invalid_request: "invalidRequest",
+  not_ratable: "notRatable",
+  not_on_main_list: "notOnMainList",
+  player_absent: "playerAbsent",
+  not_found: "notFound",
+  save_failed: "saveFailed",
+} as const satisfies Record<RatingErrorCode, string>;
 
 // Unknown codes get the generic message: the server's error code is never echoed back verbatim.
-export function ratingErrorMessage(code: string | null): string | null {
+export function ratingErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
-  return code in MESSAGES ? MESSAGES[code as RatingErrorCode] : MESSAGES.save_failed;
+  const errors = t(lang).organizer.ratings.errors;
+  const key = code in ERROR_KEYS ? ERROR_KEYS[code as RatingErrorCode] : "saveFailed";
+  return key === "invalidRating" ? errors.invalidRating(RATING_MIN, RATING_MAX, RATING_STEP) : errors[key];
 }

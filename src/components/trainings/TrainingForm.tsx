@@ -3,7 +3,7 @@ import { CalendarClock, MapPin, StickyNote, Type, Save } from "lucide-react";
 import { FormField } from "@/components/form/FormField";
 import { SubmitButton } from "@/components/form/SubmitButton";
 import { ServerError } from "@/components/form/ServerError";
-import type { Lang } from "@/i18n";
+import { t, type Lang } from "@/i18n";
 import {
   SIGNUP_CLOSE_HOURS,
   trainingErrorMessage,
@@ -35,6 +35,7 @@ export default function TrainingForm({
   pendingText,
   inlineLabels = false,
 }: Props) {
+  const d = t(lang).organizer.form;
   const [values, setValues] = useState<TrainingInput>(initial);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<TrainingField, string>>>({});
@@ -80,53 +81,53 @@ export default function TrainingForm({
     <form method="POST" action={action} className="space-y-4" onSubmit={handleSubmit} noValidate>
       <FormField
         id="title"
-        label="Title"
+        label={d.title}
         inlineLabel={inlineLabels}
         value={values.title}
         onChange={(v) => {
           update("title", "title", v);
         }}
-        placeholder="e.g. Intermediate group"
+        placeholder={d.titlePlaceholder}
         error={errors.title}
         icon={inlineLabels ? undefined : <Type className="size-4" />}
       />
 
       <FormField
         id="starts_at"
-        label="Start"
+        label={d.start}
         type="datetime-local"
         value={values.startsAtLocal}
         onChange={(v) => {
           update("startsAtLocal", "starts_at", v);
         }}
         error={errors.starts_at}
-        hint={`Time in Poland (Europe/Warsaw). Sign-ups close ${SIGNUP_CLOSE_HOURS} hours before.`}
+        hint={d.startHint(SIGNUP_CLOSE_HOURS)}
         hintAbove={inlineLabels}
         icon={inlineLabels ? undefined : <CalendarClock className="size-4" />}
       />
 
       <FormField
         id="location"
-        label="Location"
+        label={d.location}
         inlineLabel={inlineLabels}
         value={values.location}
         onChange={(v) => {
           update("location", "location", v);
         }}
-        placeholder="e.g. School sports hall, ul. Sportowa 1"
+        placeholder={d.locationPlaceholder}
         error={errors.location}
         icon={inlineLabels ? undefined : <MapPin className="size-4" />}
       />
 
       <FormField
         id="note"
-        label="Note (optional)"
+        label={d.note}
         inlineLabel={inlineLabels}
         value={values.note}
         onChange={(v) => {
           update("note", "note", v);
         }}
-        placeholder="e.g. Entrance from the pitch side"
+        placeholder={d.notePlaceholder}
         error={errors.note}
         icon={inlineLabels ? undefined : <StickyNote className="size-4" />}
         multiline

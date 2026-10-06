@@ -16,25 +16,21 @@ export function isAttendanceStatus(value: unknown): value is AttendanceStatus {
   return value === "present" || value === "absent";
 }
 
-export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
-  present: "Present",
-  absent: "Absent",
-};
-
 export type AttendanceErrorCode = "not_markable" | "not_on_main_list" | "invalid_request" | "not_found" | "save_failed";
 
-const MESSAGES: Record<AttendanceErrorCode, string> = {
-  not_markable: "Attendance can be marked only after the training has taken place",
-  not_on_main_list: "Only main-list players can be marked",
-  invalid_request: "Something went wrong. Please try again.",
-  not_found: "That player or training no longer exists",
-  save_failed: "Could not save attendance. Please try again.",
-};
+const ERROR_KEYS = {
+  not_markable: "notMarkable",
+  not_on_main_list: "notOnMainList",
+  invalid_request: "invalidRequest",
+  not_found: "notFound",
+  save_failed: "saveFailed",
+} as const satisfies Record<AttendanceErrorCode, string>;
 
 // Unknown codes get the generic message: the server's error code is never echoed back verbatim.
-export function attendanceErrorMessage(code: string | null): string | null {
+export function attendanceErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
-  return code in MESSAGES ? MESSAGES[code as AttendanceErrorCode] : MESSAGES.save_failed;
+  const key = code in ERROR_KEYS ? ERROR_KEYS[code as AttendanceErrorCode] : "saveFailed";
+  return t(lang).organizer.attendance.errors[key];
 }
 
 // FR-010: the reason a blocked player sees on the sign-up page instead of the sign-up button. A late

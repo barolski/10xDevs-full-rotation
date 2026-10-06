@@ -97,11 +97,15 @@ const controlStates: { label: string; seedStatus: SaveState; seedMessage?: strin
   { label: "Idle", seedStatus: "idle" },
   { label: "Saving", seedStatus: "saving" },
   { label: "Saved", seedStatus: "saved" },
-  { label: "Attendance error", seedStatus: "error", seedMessage: attendanceErrorMessage("save_failed") ?? undefined },
+  {
+    label: "Attendance error",
+    seedStatus: "error",
+    seedMessage: attendanceErrorMessage("save_failed", lang) ?? undefined,
+  },
   {
     label: "Rating error: absent player",
     seedStatus: "error",
-    seedMessage: ratingErrorMessage("player_absent") ?? undefined,
+    seedMessage: ratingErrorMessage("player_absent", lang) ?? undefined,
   },
 ];
 
@@ -137,6 +141,7 @@ const blockedRoster = splitRoster(entries.slice(0, 5));
         <section class="max-w-4xl space-y-2">
           <h2 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">{state.label}</h2>
           <TrainingPlayersTable
+            lang={lang}
             trainingId={TRAINING_ID}
             rows={state.rows}
             ratable={state.ratable}
@@ -156,6 +161,7 @@ const blockedRoster = splitRoster(entries.slice(0, 5));
               <span class="text-muted-foreground w-28 shrink-0 text-xs">{state.label}</span>
               {state.label.startsWith("Rating") ? (
                 <TrainingRatingInput
+                  lang={lang}
                   trainingId={TRAINING_ID}
                   userId={id(60 + index)}
                   initialRating={null}
@@ -167,6 +173,7 @@ const blockedRoster = splitRoster(entries.slice(0, 5));
                 />
               ) : (
                 <AttendanceToggle
+                  lang={lang}
                   trainingId={TRAINING_ID}
                   userId={id(60 + index)}
                   initialStatus={index === 3 ? null : "present"}

@@ -3,19 +3,16 @@
 // reverse) fails `npx astro check`. Browser-safe on purpose: islands import it.
 //
 // An entry that depends on a count is a function of the number and uses `plural()` for the forms.
+import { formatNumber } from "@/i18n/lang";
 import { plural } from "@/i18n/plural";
 
 export const pl = {
   language: {
-    // Names the switch for assistive technology; the visible text is the short code of the other language.
-    switchTo: {
-      pl: "Zmień język na polski",
-      en: "Zmień język na angielski",
-    },
-    short: {
-      pl: "PL",
-      en: "EN",
-    },
+    heading: "Język",
+    description: "Wybierz język aplikacji.",
+    // Each language is named in itself, so it is recognisable whatever the current UI language is.
+    pl: "Polski",
+    en: "English",
   },
   config: {
     attention: "Uwaga:",
@@ -241,6 +238,122 @@ export const pl = {
       notSignedUp: "Nie masz zapisu na ten trening",
       notFound: "Nie znaleziono treningu",
       saveFailed: "Coś poszło nie tak. Spróbuj ponownie.",
+    },
+  },
+  organizer: {
+    index: {
+      pageTitle: "Treningi",
+      heading: "Treningi",
+      newTraining: "Nowy trening",
+      upcoming: "Nadchodzące",
+      past: "Minione",
+      noUpcoming: "Brak nadchodzących treningów.",
+      noPast: "Brak minionych treningów.",
+      loadFailed: "Nie udało się wczytać treningów. Odśwież stronę.",
+    },
+    form: {
+      newPageTitle: "Nowy trening",
+      newHeading: "Nowy trening",
+      create: "Utwórz trening",
+      creating: "Tworzenie...",
+      editPageTitle: (title: string) => `Edycja: ${title}`,
+      editHeading: "Edytuj trening",
+      save: "Zapisz zmiany",
+      saving: "Zapisywanie...",
+      title: "Tytuł",
+      titlePlaceholder: "np. Grupa średniozaawansowana",
+      start: "Start",
+      startHint: (hours: number) =>
+        `Czas w Polsce (Europe/Warsaw). Zapisy zamykają się ${hours} ${plural("pl", hours, { one: "godzinę", few: "godziny", many: "godzin", other: "godziny" })} przed treningiem.`,
+      location: "Miejsce",
+      locationPlaceholder: "np. Hala szkolna, ul. Sportowa 1",
+      note: "Notatka (opcjonalnie)",
+      notePlaceholder: "np. Wejście od strony boiska",
+    },
+    training: {
+      capacity: (taken: string, size: number, min: number) => `${taken} / ${size} (min. ${min})`,
+      signupLink: "Link do zapisów",
+      players: "Gracze",
+      playersByStatus: "Gracze według statusu",
+      ratingsNotOpen: "Oceny graczy otwierają się po odbyciu treningu.",
+      cancelledNoRatings: "Trening został odwołany — nie ma ocen.",
+      playersLoadFailed: "Nie udało się wczytać graczy. Odśwież stronę.",
+      controlsLoadFailed: "Nie udało się wczytać obecności i ocen. Odśwież stronę.",
+      edit: "Edytuj",
+      openPlayerView: "Otwórz widok gracza",
+      notice: {
+        created: "Trening utworzony. Skopiuj link i udostępnij go grupie.",
+        updated: "Trening zaktualizowany.",
+      },
+    },
+    copyLink: {
+      label: "Link do treningu",
+      copy: "Kopiuj link",
+      copied: "Skopiowano",
+      announced: "Link skopiowany do schowka",
+    },
+    players: {
+      caption: "Gracze tego treningu",
+      player: "Gracz",
+      training: "Trening",
+      attendance: "Obecność",
+      rating: "Ocena",
+      noPlayers: "Brak graczy.",
+      notApplicable: "Nie dotyczy",
+      buckets: {
+        main: "Zapisany",
+        waitlist: "Lista rezerwowa",
+        blocked: "Zablokowany",
+        noResponse: "Brak odpowiedzi",
+      },
+    },
+    attendance: {
+      group: (name: string) => `Obecność: ${name}`,
+      groupFallback: "Obecność",
+      present: "Obecny",
+      absent: "Nieobecny",
+      errors: {
+        notMarkable: "Obecność można oznaczyć dopiero po odbyciu treningu",
+        notOnMainList: "Oznaczać można tylko graczy z listy głównej",
+        invalidRequest: "Coś poszło nie tak. Spróbuj ponownie.",
+        notFound: "Ten gracz lub trening już nie istnieje",
+        saveFailed: "Nie udało się zapisać obecności. Spróbuj ponownie.",
+      },
+    },
+    ratings: {
+      label: (name: string) => `Ocena: ${name}`,
+      labelFallback: "Ocena",
+      errors: {
+        invalidRating: (min: number, max: number, step: number) =>
+          `Ocena musi być w przedziale ${formatNumber("pl", min)}–${formatNumber("pl", max)} z krokiem ${formatNumber("pl", step)}`,
+        invalidRequest: "Coś poszło nie tak. Spróbuj ponownie.",
+        notRatable: "Oceny można wystawiać dopiero po odbyciu treningu",
+        notOnMainList: "Oceniać można tylko graczy z listy głównej",
+        playerAbsent: "Ten gracz został oznaczony jako nieobecny i nie można go ocenić",
+        notFound: "Ten gracz lub trening już nie istnieje",
+        saveFailed: "Nie udało się zapisać oceny. Spróbuj ponownie.",
+      },
+    },
+    teams: {
+      title: "Składy",
+      noTeams: "Brak składów — wygeneruj je z potwierdzonej listy.",
+      noneGenerated: "Dla tego treningu nie wygenerowano składów.",
+      loadFailed: "Nie udało się wczytać składów. Odśwież stronę.",
+      teamLabel: { A: "Drużyna A", B: "Drużyna B" },
+      average: "śr.",
+      setter: "Rozgrywający",
+      substituteSetter: "Zastępczy rozgrywający",
+      generate: "Generuj składy",
+      regenerate: "Generuj ponownie",
+      confirmRegenerate: "Wygenerować składy ponownie? To zastąpi obecny podział.",
+      imbalance: (target: number, off: number) =>
+        `Nie udało się wyrównać drużyn w granicach ${formatNumber("pl", target)} — najlepszy podział różni się o ${formatNumber("pl", off)}. Pokazano go bez zmian.`,
+      errors: {
+        notGeneratable: "Składy można generować tylko przed rozpoczęciem potwierdzonego treningu",
+        invalidRequest: "Coś poszło nie tak. Spróbuj ponownie.",
+        notFound: "Ten trening już nie istnieje",
+        saveFailed: "Nie udało się zapisać składów. Spróbuj ponownie.",
+      },
     },
   },
   forbidden: {

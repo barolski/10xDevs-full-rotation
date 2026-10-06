@@ -6,7 +6,16 @@ import { en } from "@/i18n/en";
 import { type Lang } from "@/i18n/lang";
 import { pl } from "@/i18n/pl";
 
-export { DEFAULT_LANG, isLang, LANG_COOKIE, LANGS, langFromCookie, LOCALES, type Lang } from "@/i18n/lang";
+export {
+  DEFAULT_LANG,
+  formatNumber,
+  isLang,
+  LANG_COOKIE,
+  LANGS,
+  langFromCookie,
+  LOCALES,
+  type Lang,
+} from "@/i18n/lang";
 export { plural } from "@/i18n/plural";
 
 // Widens the Polish literals to `string` (and keeps count functions), so `en` has to match its keys.

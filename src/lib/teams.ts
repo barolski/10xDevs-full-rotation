@@ -6,16 +6,12 @@
 // must not feed its own split), and a player with no past rating is UNRATED_RATING (0). The
 // algorithm here is pure and deterministic -- no I/O, no "no rating" branch.
 
+import { t, type Lang } from "@/i18n";
 import type { PlayerPosition } from "@/lib/profiles";
 
 export type TeamId = "A" | "B";
 
 export const TEAM_IDS = ["A", "B"] as const satisfies readonly TeamId[];
-
-export const TEAM_LABELS: Record<TeamId, string> = {
-  A: "Team A",
-  B: "Team B",
-};
 
 // Teams are balanced on AVERAGE rating, not sum: with an odd roster (e.g. 6 vs 5) the larger team
 // always carries a higher sum, so a sum metric would be unfair. The average is size-independent.
@@ -288,22 +284,23 @@ export function generateTeams(input: TeamPlayer[]): GenerateResult {
 
 export type TeamsErrorCode = "not_generatable" | "invalid_request" | "not_found" | "save_failed";
 
-const MESSAGES: Record<TeamsErrorCode, string> = {
-  not_generatable: "Teams can be generated only before a confirmed training starts",
-  invalid_request: "Something went wrong. Please try again.",
-  not_found: "That training no longer exists",
-  save_failed: "Could not save the teams. Please try again.",
-};
+const ERROR_KEYS = {
+  not_generatable: "notGeneratable",
+  invalid_request: "invalidRequest",
+  not_found: "notFound",
+  save_failed: "saveFailed",
+} as const satisfies Record<TeamsErrorCode, string>;
 
 // Unknown codes get the generic message: the server's error code is never echoed back verbatim.
-export function teamsErrorMessage(code: string | null): string | null {
+export function teamsErrorMessage(code: string | null, lang: Lang): string | null {
   if (!code) return null;
-  return code in MESSAGES ? MESSAGES[code as TeamsErrorCode] : MESSAGES.save_failed;
+  const key = code in ERROR_KEYS ? ERROR_KEYS[code as TeamsErrorCode] : "saveFailed";
+  return t(lang).organizer.teams.errors[key];
 }
 
 // Warning shown on the rendered teams when the split couldn't meet the average-rating target
 // (generation never refuses; FR-020 states by how much it's exceeded). Null when within target.
-export function teamsImbalanceWarning(exceededBy: number): string | null {
+export function teamsImbalanceWarning(exceededBy: number, lang: Lang): string | null {
   if (exceededBy <= 0) return null;
-  return `These teams couldn't be balanced within ${TEAM_AVG_DIFF_MAX} — the closest split is off by ${exceededBy}. Shown as-is.`;
+  return t(lang).organizer.teams.imbalance(TEAM_AVG_DIFF_MAX, exceededBy);
 }

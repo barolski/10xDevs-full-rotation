@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { t, type Lang } from "@/i18n";
 
 interface Props {
+  lang: Lang;
   url: string;
 }
 
-export default function CopyLinkButton({ url }: Props) {
+export default function CopyLinkButton({ lang, url }: Props) {
+  const d = t(lang).organizer.copyLink;
   const inputRef = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -38,18 +41,18 @@ export default function CopyLinkButton({ url }: Props) {
           ref={inputRef}
           readOnly
           value={url}
-          aria-label="Training link"
+          aria-label={d.label}
           onFocus={(e) => {
             e.currentTarget.select();
           }}
         />
         <Button type="button" variant="outline" onClick={() => void copy()}>
           {copied ? <Check /> : <Copy />}
-          {copied ? "Copied" : "Copy link"}
+          {copied ? d.copied : d.copy}
         </Button>
       </div>
       <p aria-live="polite" className="sr-only">
-        {copied ? "Link copied to clipboard" : ""}
+        {copied ? d.announced : ""}
       </p>
     </div>
   );

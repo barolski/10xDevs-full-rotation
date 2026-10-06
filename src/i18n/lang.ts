@@ -26,3 +26,8 @@ export function langFromCookie(header: string | null): Lang {
   }
   return DEFAULT_LANG;
 }
+
+// A number as the language writes it ("7,5" in Polish, "7.5" in English), at most two decimals.
+export function formatNumber(lang: Lang, value: number): string {
+  return new Intl.NumberFormat(LOCALES[lang], { maximumFractionDigits: 2 }).format(value);
+}
