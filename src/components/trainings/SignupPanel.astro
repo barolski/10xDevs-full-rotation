@@ -1,11 +1,11 @@
 ---
-// The player's view of one training's body on /t/[id]: details and the sign-up action on the left,
-// both rosters on the right once there is room for them.
+// The player's view of one training's body on /t/[id]: details and the sign-up action on top, then
+// the main list and the waitlist side by side once there is room for two columns (stacked below that).
 // Also rendered by /dev/training-kitchen-sink, so the gate shows the markup the page ships.
 //
 // The breakpoint is a container query, not a viewport one: this panel is rendered both full-width on
 // the page and inside narrow kitchen-sink cards, and it should follow its own width in each.
-import { CircleAlert, CircleCheck, LogIn, LogOut, Users } from "lucide-react";
+import { CircleAlert, CircleCheck, Users } from "lucide-react";
 import RosterList from "@/components/trainings/RosterList.astro";
 import { ROSTER_UNAVAILABLE } from "@/lib/signup-queries";
 import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
@@ -77,72 +77,68 @@ const lateWithdraw = showWithdraw && !open;
     </Alert>
   )}
 
-  <div class="grid items-start gap-6 @2xl:grid-cols-2 @2xl:gap-8">
-    <div class="space-y-6">
-      <TrainingDetails training={training} now={now} />
+  <div class="space-y-6">
+    <TrainingDetails training={training} now={now} />
 
-      {/* The player's own status comes first: it is the one fact they opened the link for.
-          Suppressed entirely when the roster could not be read: an empty roster would otherwise be
-          reported as twelve free slots, and a player already on the list would be offered Sign up. */}
-      {!failed && (
-        <div class="space-y-3">
-          {placement ? (
-            <p class="flex flex-wrap items-center gap-2">
-              <span class:list={[badgeVariants({ variant: placement.list === "main" ? "success" : "secondary" })]}>
-                {placement.list === "main" ? (
-                  <CircleCheck className="size-3.5" aria-hidden="true" />
-                ) : (
-                  <Users className="size-3.5" aria-hidden="true" />
-                )}
-                {placement.list === "main" ? "Main list" : "Waitlist"}
-                <span class="tabular-nums">#{placement.rank}</span>
-              </span>
-              <span class="text-muted-foreground text-sm">
-                {placement.list === "main" ? "You're in." : "You'll move up if someone withdraws."}
-              </span>
-            </p>
-          ) : (
-            <p class="text-muted-foreground text-sm">
-              {free > 0
-                ? `${free} of ${MAIN_LIST_SIZE} spots left on the main list.`
-                : "The main list is full — signing up now puts you on the waitlist."}
-            </p>
-          )}
-
-          {showWithdraw && (
-            <form method="POST" action={`/api/trainings/${training.id}/withdraw`} class="space-y-2">
-              <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
-                <LogOut aria-hidden="true" />
-                Withdraw
-              </button>
-              {lateWithdraw && (
-                <p class="text-muted-foreground text-xs">
-                  Sign-ups are closed. Withdrawing now may count as an absence.
-                </p>
+    {/* The player's own status comes first: it is the one fact they opened the link for.
+        Suppressed entirely when the roster could not be read: an empty roster would otherwise be
+        reported as twelve free slots, and a player already on the list would be offered Sign up. */}
+    {!failed && (
+      <div class="space-y-3">
+        {placement ? (
+          <p class="flex flex-wrap items-center gap-2">
+            <span class:list={[badgeVariants({ variant: placement.list === "main" ? "success" : "secondary" })]}>
+              {placement.list === "main" ? (
+                <CircleCheck className="size-3.5" aria-hidden="true" />
+              ) : (
+                <Users className="size-3.5" aria-hidden="true" />
               )}
-            </form>
-          )}
-          {showSignup && (
-            <form method="POST" action={`/api/trainings/${training.id}/signup`}>
-              <button type="submit" class:list={[cn(buttonVariants(), "w-full")]}>
-                <LogIn aria-hidden="true" />
-                Sign up
-              </button>
-            </form>
-          )}
-          {showBlocked && (
-            <p role="alert" class="bg-warning-soft text-warning-strong rounded-md px-3 py-2 text-sm">
-              {blockReason(absences)}
-            </p>
-          )}
-        </div>
-      )}
-    </div>
+              {placement.list === "main" ? "Main list" : "Waitlist"}
+              <span class="tabular-nums">#{placement.rank}</span>
+            </span>
+            <span class="text-muted-foreground text-sm">
+              {placement.list === "main" ? "You're in." : "You'll move up if someone withdraws."}
+            </span>
+          </p>
+        ) : (
+          <p class="text-muted-foreground text-sm">
+            {free > 0
+              ? `${free} of ${MAIN_LIST_SIZE} spots left on the main list.`
+              : "The main list is full — signing up now puts you on the waitlist."}
+          </p>
+        )}
+
+        {showWithdraw && (
+          <form method="POST" action={`/api/trainings/${training.id}/withdraw`} class="space-y-2">
+            <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
+              Withdraw
+            </button>
+            {lateWithdraw && (
+              <p class="text-muted-foreground text-xs">Sign-ups are closed. Withdrawing now may count as an absence.</p>
+            )}
+          </form>
+        )}
+        {showSignup && (
+          <form method="POST" action={`/api/trainings/${training.id}/signup`}>
+            <button type="submit" class:list={[cn(buttonVariants(), "w-full")]}>
+              Sign up
+            </button>
+          </form>
+        )}
+        {showBlocked && (
+          <p role="alert" class="bg-warning-soft text-warning-strong rounded-md px-3 py-2 text-sm">
+            {blockReason(absences)}
+          </p>
+        )}
+      </div>
+    )}
 
     {failed ? (
       <p class="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">{ROSTER_UNAVAILABLE}</p>
     ) : (
-      <div class="space-y-4">
+      <div class="grid items-start gap-4 @lg:grid-cols-2 @lg:gap-6">
+        {/* Two columns from @lg; stacked below, where each list would be too narrow for a name, rank
+            and the "you" pill. The waitlist always renders so the columns stay balanced when empty. */}
         <RosterList
           title="Main list"
           entries={roster.main}
@@ -150,14 +146,13 @@ const lateWithdraw = showWithdraw && !open;
           highlightUserId={userId}
           count={`${roster.main.length}/${MAIN_LIST_SIZE}`}
         />
-        {roster.waitlist.length > 0 && (
-          <RosterList
-            title="Waitlist"
-            entries={roster.waitlist}
-            emptyLabel="Nobody is waiting."
-            highlightUserId={userId}
-          />
-        )}
+        <RosterList
+          title="Waitlist"
+          entries={roster.waitlist}
+          emptyLabel="Nobody is waiting."
+          highlightUserId={userId}
+          count={String(roster.waitlist.length)}
+        />
       </div>
     )}
   </div>
