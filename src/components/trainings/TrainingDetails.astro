@@ -9,6 +9,7 @@ interface Props {
 }
 
 const { training, now } = Astro.props;
+const lang = Astro.locals.lang;
 const startsAt = new Date(training.starts_at);
 const open = isSignupOpen(startsAt, now);
 ---
@@ -18,7 +19,7 @@ const open = isSignupOpen(startsAt, now);
     <dt>
       <CalendarClock className="text-muted-foreground mt-1 size-4" aria-label="Start" />
     </dt>
-    <dd class="text-base font-semibold">{formatTrainingDateTime(startsAt)}</dd>
+    <dd class="text-base font-semibold">{formatTrainingDateTime(startsAt, lang)}</dd>
   </div>
   <div class="flex items-start gap-3">
     <dt>
@@ -39,7 +40,7 @@ const open = isSignupOpen(startsAt, now);
       <Clock className="text-muted-foreground mt-0.5 size-4" aria-label="Sign-ups" />
     </dt>
     <dd class:list={[open ? "text-foreground" : "text-muted-foreground"]}>
-      {open ? `Sign-ups open until ${formatTrainingDateTime(signupClosesAt(startsAt))}` : "Sign-ups are closed"}
+      {open ? `Sign-ups open until ${formatTrainingDateTime(signupClosesAt(startsAt), lang)}` : "Sign-ups are closed"}
     </dd>
   </div>
 </dl>

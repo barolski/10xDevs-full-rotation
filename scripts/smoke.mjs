@@ -134,8 +134,41 @@ async function request(path, { method = "GET", form } = {}) {
   return { status: response.status, location: response.headers.get("location") ?? "" };
 }
 
+// Language checks use plain fetches outside the cookie jar, so the language cookie never leaks into the
+// session-based steps below.
+async function pageLang(cookie) {
+  const response = await fetch(BASE_URL + "/", { redirect: "manual", headers: cookie ? { Cookie: cookie } : {} });
+  const html = await response.text();
+  const lang = /<html[^>]*\slang="([^"]*)"/.exec(html)?.[1] ?? "none";
+  return { status: response.status, location: "", detail: `lang=${lang}` };
+}
+
+async function switchLanguage(lang) {
+  const response = await fetch(BASE_URL + "/api/lang", {
+    method: "POST",
+    redirect: "manual",
+    headers: { Origin: BASE_URL, "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ lang, next: "/dashboard" }).toString(),
+  });
+  const setCookie = response.headers.get("set-cookie") ?? "";
+  return {
+    status: response.status,
+    location: response.headers.get("location") ?? "",
+    detail: setCookie.includes(`fr-lang=${lang}`) ? "cookie=set" : "cookie=none",
+  };
+}
+
 const steps = [
   ["home renders", () => request("/"), { status: 200 }],
+  ["home is Polish by default", () => pageLang(), { status: 200, detail: "lang=pl" }],
+  ["language cookie switches to English", () => pageLang("fr-lang=en"), { status: 200, detail: "lang=en" }],
+  ["unknown language cookie falls back to Polish", () => pageLang("fr-lang=xx"), { status: 200, detail: "lang=pl" }],
+  [
+    "language switch sets the cookie and returns to the page",
+    () => switchLanguage("en"),
+    { status: 303, location: "/dashboard", detail: "cookie=set" },
+  ],
+  ["language switch rejects an unknown language", () => switchLanguage("xx"), { status: 400, detail: "cookie=none" }],
   ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin?next=" }],
   [
     "organizer page redirects anonymous user",

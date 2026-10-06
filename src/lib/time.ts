@@ -1,5 +1,7 @@
 // Trainings are entered and shown in Polish wall-clock time, stored as UTC instants (timestamptz).
 // Workers run in UTC, so never parse a wall-clock string with `new Date(...)`: convert through these helpers.
+import { LOCALES, type Lang } from "@/i18n";
+
 export const TRAINING_TIME_ZONE = "Europe/Warsaw";
 
 const LOCAL_INPUT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
@@ -42,18 +44,26 @@ export function zonedLocalToUtc(local: string): Date | null {
   return candidates.length ? new Date(Math.min(...candidates)) : null;
 }
 
-const displayFormatter = new Intl.DateTimeFormat("en-GB", {
-  timeZone: TRAINING_TIME_ZONE,
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
+// One display formatter per UI language; the time zone is always the training zone.
+const displayFormatters: Record<Lang, Intl.DateTimeFormat> = {
+  pl: createDisplayFormatter("pl"),
+  en: createDisplayFormatter("en"),
+};
 
-// e.g. "Tue, 6 Oct 2026, 19:00"
-export function formatTrainingDateTime(instant: Date): string {
-  return displayFormatter.format(instant);
+function createDisplayFormatter(lang: Lang) {
+  return new Intl.DateTimeFormat(LOCALES[lang], {
+    timeZone: TRAINING_TIME_ZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
+// e.g. "wt., 6 paź 2026, 19:00" (pl) / "Tue, 6 Oct 2026, 19:00" (en)
+export function formatTrainingDateTime(instant: Date, lang: Lang): string {
+  return displayFormatters[lang].format(instant);
 }

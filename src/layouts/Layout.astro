@@ -5,6 +5,7 @@ import "../styles/global.css";
 import AppHeader from "@/components/AppHeader.astro";
 import Banner from "@/components/Banner.astro";
 import { missingConfigs } from "@/lib/config-status";
+import { t } from "@/i18n";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 interface Props {
@@ -15,10 +16,12 @@ interface Props {
 }
 
 const { title = "FullRotation", theme } = Astro.props;
+const lang = Astro.locals.lang;
+const dictionary = t(lang);
 ---
 
 <!doctype html>
-<html lang="en" class:list={[{ dark: theme === "dark" }]} data-theme-forced={theme}>
+<html lang={lang} class:list={[{ dark: theme === "dark" }]} data-theme-forced={theme}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
@@ -42,12 +45,12 @@ const { title = "FullRotation", theme } = Astro.props;
   <body class="flex min-h-dvh flex-col">
     {missingConfigs.map((cfg) => (
       <Banner variant="error">
-        <strong>Uwaga:</strong> {cfg.message}
+        <strong>{dictionary.config.attention}</strong> {dictionary.config.items[cfg.key].message}
         {cfg.docsUrl && (
           <>
             {" "}
             <a href={cfg.docsUrl} target="_blank" rel="noopener noreferrer">
-              {cfg.docsLabel ?? "Dokumentacja"}
+              {dictionary.config.items[cfg.key].docsLabel}
             </a>
             .
           </>

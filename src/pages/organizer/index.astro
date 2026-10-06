@@ -107,7 +107,7 @@ const sections = [
                         <span class="min-w-0">
                           <span class="block truncate font-medium">{training.title}</span>
                           <span class="text-muted-foreground block text-sm">
-                            {formatTrainingDateTime(startsAt)} · {training.location}
+                            {formatTrainingDateTime(startsAt, Astro.locals.lang)} · {training.location}
                           </span>
                         </span>
                         <span class:list={[badgeVariants({ variant: badge.variant })]}>
