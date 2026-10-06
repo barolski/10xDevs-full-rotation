@@ -26,9 +26,11 @@ const { title, entries, emptyLabel, highlightUserId, count, showRank = true } = 
     {count && <span class="text-muted-foreground text-xs tabular-nums">{count}</span>}
   </h2>
   {entries.length === 0 ? (
-    <p class="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-sm">{emptyLabel}</p>
+    <p class="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-sm dark:border-input">
+      {emptyLabel}
+    </p>
   ) : (
-    <ol class="space-y-0.5 rounded-lg border p-1.5">
+    <ol class="space-y-0.5 rounded-lg border p-1.5 dark:border-input">
       {entries.map((entry, index) => {
         // The signed-in player's row is highlighted as a rounded inset pill, not a full-bleed band:
         // the list has inner padding and gaps, so the accent fill is a self-contained rounded cell
