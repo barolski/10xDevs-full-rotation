@@ -7,9 +7,11 @@ import { isSignupOpen, signupClosesAt, type Training } from "@/lib/trainings";
 interface Props {
   training: Training;
   now: Date;
+  // Drops the start and location rows where the player card band already shows them.
+  hideInBand?: boolean;
 }
 
-const { training, now } = Astro.props;
+const { training, now, hideInBand = false } = Astro.props;
 const lang = Astro.locals.lang;
 const d = t(lang).training.details;
 const startsAt = new Date(training.starts_at);
@@ -17,18 +19,22 @@ const open = isSignupOpen(startsAt, now);
 ---
 
 <dl class="grid gap-3 text-sm">
-  <div class="flex items-start gap-3">
-    <dt>
-      <CalendarClock className="text-muted-foreground mt-1 size-4" aria-label={d.start} />
-    </dt>
-    <dd class="text-base font-semibold">{formatTrainingDateTime(startsAt, lang)}</dd>
-  </div>
-  <div class="flex items-start gap-3">
-    <dt>
-      <MapPin className="text-muted-foreground mt-0.5 size-4" aria-label={d.location} />
-    </dt>
-    <dd class="min-w-0 break-words">{training.location}</dd>
-  </div>
+  {!hideInBand && (
+    <div class="flex items-start gap-3">
+      <dt>
+        <CalendarClock className="text-muted-foreground mt-1 size-4" aria-label={d.start} />
+      </dt>
+      <dd class="text-base font-semibold">{formatTrainingDateTime(startsAt, lang)}</dd>
+    </div>
+  )}
+  {!hideInBand && (
+    <div class="flex items-start gap-3">
+      <dt>
+        <MapPin className="text-muted-foreground mt-0.5 size-4" aria-label={d.location} />
+      </dt>
+      <dd class="min-w-0 break-words">{training.location}</dd>
+    </div>
+  )}
   {training.note && (
     <div class="flex items-start gap-3">
       <dt>

@@ -1,0 +1,45 @@
+---
+// The hall's slots as a meter: one pill per place on the main list, taken ones filled orange, a tick after the
+// slot where the training is confirmed (the minimum), with the counter and a one-line state sentence.
+// Used on the player training card.
+import { t } from "@/i18n";
+import { MAIN_LIST_SIZE, MIN_CONFIRMED } from "@/lib/signups";
+
+interface Props {
+  taken: number;
+  capacity?: number;
+  minimum?: number;
+}
+
+const { taken, capacity = MAIN_LIST_SIZE, minimum = MIN_CONFIRMED } = Astro.props;
+const d = t(Astro.locals.lang).signup;
+const filled = Math.min(Math.max(taken, 0), capacity);
+const sentence =
+  filled >= capacity
+    ? d.mainFull
+    : filled >= minimum
+      ? d.spotsMinimumReached(capacity - filled)
+      : d.spotsMinimumMissing(minimum - filled);
+---
+
+<div class="space-y-2">
+  <div class="flex items-center gap-3">
+    <span class="inline-flex items-baseline font-mono text-2xl font-semibold tabular-nums">
+      {filled}
+      <span class="text-muted-foreground text-base">/{capacity}</span>
+    </span>
+    <div class="flex items-center gap-[5px]" aria-hidden="true">
+      {Array.from({ length: capacity }, (_, i) => (
+        <>
+          <span
+            class:list={["h-[9px] w-[13px] rounded-full", i < filled ? "bg-orange" : "border-input border-[1.5px]"]}
+          />
+          {i === minimum - 1 && <span class="bg-court dark:bg-court-strong h-[18px] w-0.5 rounded-full" />}
+        </>
+      ))}
+    </div>
+  </div>
+  <p class="text-muted-foreground text-sm" aria-live="polite">
+    {sentence}
+  </p>
+</div>

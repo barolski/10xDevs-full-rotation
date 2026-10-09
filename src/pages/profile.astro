@@ -57,7 +57,7 @@ const error = profileErrorMessage(params.get("error"), lang);
         )}
 
         {/* Remembered in a cookie (no profile column); works even when the profile failed to load. */}
-        <section class="border-t pt-4" aria-labelledby="language-heading">
+        <section aria-labelledby="language-heading">
           <h2 id="language-heading" class="text-sm font-medium">
             {d.language.heading}
           </h2>
@@ -72,6 +72,7 @@ const error = profileErrorMessage(params.get("error"), lang);
                 lang={code}
                 variant={code === lang ? "default" : "outline"}
                 size="sm"
+                className={code === lang ? "bg-orange hover:bg-orange-strong text-white" : undefined}
                 aria-pressed={code === lang}
               >
                 {d.language[code]}

@@ -147,7 +147,11 @@ export default function ProfileForm({
         )}
       </div>
 
-      <SubmitButton pending={submitting} pendingText={d.pending}>
+      <SubmitButton
+        pending={submitting}
+        pendingText={d.pending}
+        className="bg-orange hover:bg-orange-strong font-semibold text-white"
+      >
         {d.submit}
       </SubmitButton>
     </form>

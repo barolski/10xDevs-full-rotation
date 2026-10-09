@@ -78,12 +78,13 @@ export function trainingDisplayStatus(
 // screen and the player card all read from here instead of each inventing copy. Every variant is a full
 // -soft/-strong token pair (see badge.tsx), which stays legible in dark mode. Four distinct colours on
 // purpose: `open` (sign-ups running) must not read as `confirmed` (settled) at a glance.
-export const TRAINING_STATUS_VARIANT: Record<TrainingDisplayStatus, "info" | "warning" | "success" | "destructive"> = {
-  open: "info",
-  finalizing: "warning",
-  confirmed: "success",
-  cancelled: "destructive",
-};
+export const TRAINING_STATUS_VARIANT: Record<TrainingDisplayStatus, "accent" | "warning" | "success" | "destructive"> =
+  {
+    open: "accent",
+    finalizing: "warning",
+    confirmed: "success",
+    cancelled: "destructive",
+  };
 
 export type TrainingField = "title" | "starts_at" | "location" | "note";
 

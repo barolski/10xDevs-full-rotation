@@ -22,8 +22,9 @@ const onHome = Astro.url.pathname === "/";
   <div class="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-3 px-4">
     <a
       href={home}
-      class="focus-visible:ring-ring rounded-md text-base font-semibold tracking-tight outline-none focus-visible:ring-2"
+      class="focus-visible:ring-ring flex items-center gap-2 rounded-md text-base font-semibold tracking-tight outline-none focus-visible:ring-2"
     >
+      <span class="border-orange size-[18px] rounded-full border-[2.5px]" aria-hidden="true"></span>
       Full Rotation
     </a>
     <nav aria-label={dictionary.header.mainNav} class="flex items-center gap-1 sm:gap-2">
@@ -33,7 +34,7 @@ const onHome = Astro.url.pathname === "/";
           aria-current={onOrganizerPage ? "page" : undefined}
           class:list={[
             buttonVariants({ variant: "ghost", size: "sm" }),
-            onOrganizerPage && "bg-accent text-accent-foreground",
+            onOrganizerPage && "bg-secondary text-foreground font-semibold",
           ]}
         >
           {dictionary.header.trainings}
@@ -46,7 +47,7 @@ const onHome = Astro.url.pathname === "/";
             aria-current={onDashboard ? "page" : undefined}
             class:list={[
               buttonVariants({ variant: "ghost", size: "sm" }),
-              onDashboard && "bg-accent text-accent-foreground",
+              onDashboard && "bg-secondary text-foreground font-semibold",
             ]}
           >
             {dictionary.header.dashboard}
@@ -54,14 +55,14 @@ const onHome = Astro.url.pathname === "/";
           <details data-user-menu class="relative">
             <summary
               aria-label={dictionary.header.accountMenu}
-              class="bg-info text-background focus-visible:ring-ring flex size-8 cursor-pointer list-none items-center justify-center rounded-full text-sm font-semibold outline-none focus-visible:ring-2 [&::-webkit-details-marker]:hidden"
+              class="bg-orange text-white focus-visible:ring-ring flex size-8 cursor-pointer list-none items-center justify-center rounded-full text-sm font-semibold outline-none focus-visible:ring-2 [&::-webkit-details-marker]:hidden"
             >
               {initial}
             </summary>
             <div class="bg-popover text-popover-foreground border-border absolute top-full right-0 z-50 mt-2 flex min-w-40 flex-col gap-1 rounded-md border p-1 shadow-md">
               <a
                 href="/profile"
-                class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring rounded-sm px-2 py-1.5 text-sm outline-none focus-visible:ring-2"
+                class="hover:bg-secondary hover:text-secondary-foreground focus-visible:ring-ring rounded-sm px-2 py-1.5 text-sm outline-none focus-visible:ring-2"
               >
                 {dictionary.header.profile}
               </a>
@@ -71,7 +72,7 @@ const onHome = Astro.url.pathname === "/";
               <form method="POST" action="/api/auth/signout">
                 <button
                   type="submit"
-                  class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring w-full rounded-sm px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2"
+                  class="hover:bg-secondary hover:text-secondary-foreground focus-visible:ring-ring w-full rounded-sm px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2"
                 >
                   {dictionary.header.signOut}
                 </button>

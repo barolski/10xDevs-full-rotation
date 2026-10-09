@@ -206,7 +206,11 @@ export const en: Dictionary = {
     waitlist: "Waitlist",
     youAreIn: "You're in.",
     youWillMoveUp: "You'll move up if someone withdraws.",
-    spotsLeft: (free, size) => `${free} of ${size} spots left on the main list.`,
+    spotsMinimumMissing: (missing) =>
+      `${missing} more ${plural("en", missing, { one: "player", other: "players" })} needed for the minimum.`,
+    spotsMinimumReached: (free) =>
+      `Minimum reached — we play. ${free} ${plural("en", free, { one: "spot", other: "spots" })} left.`,
+    signingUp: "Signing up…",
     mainFull: "The main list is full — signing up now puts you on the waitlist.",
     signUp: "Sign up",
     withdraw: "Withdraw",
