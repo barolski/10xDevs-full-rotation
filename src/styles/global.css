@@ -4,36 +4,28 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Colour tokens: the FullRotation design system (change training-view-design-system), built on the
- * shadcn/ui "Amber" preset (components.json baseColor: neutral).
- * Amber source: https://github.com/shadcn-ui/ui/blob/98a1fe67b439324ddc857f47fbdce056600a4329/apps/v4/registry/themes.ts#L523-L554
- * Raw values: context/changes/training-view-design-system/tokens-fullrotation.css
- *   (previous set: context/archive/2026-09-25-auth-ui-amber/tokens-amber.css)
- * Deviations from the Amber preset:
- *   - neutrals are warm sand (light) / warm graphite (dark) instead of pure grey;
- *   - --ring = --primary in each theme (>= 3:1 on every surface);
- *   - dark --primary is the preset's chart-2 (amber-500) with a dark foreground (preset sidebar-primary-foreground),
- *     so amber stays readable as text on dark surfaces;
- *   - added status tokens (success / warning / info, each with -soft background and -strong text) and
- *     destructive-foreground / -soft / -strong. Text pairs >= 4.5:1, marks >= 3:1, in both themes.
+ * Next SaaS refresh (change next-saas-ui-refresh): neutrals, primary, accent, court, radius, shadows.
+ * Source: https://next-saas-start.vercel.app/ (Tailwind v4 gray / zinc / orange scales, shadcn --radius 0.6rem),
+ * measured 2026-10-09; values in context/next-saas-ui-brief.md. Dark theme derived (shadcn zinc dark).
+ * Status (success / warning / info / destructive), chart and sidebar tokens unchanged from FullRotation v1.
  */
 :root {
   color-scheme: light;
-  --radius: 0.625rem;
-  --background: #fbf8f3;
-  --foreground: #2a2119;
+  --radius: 0.6rem;
+  --background: #f9fafb;
+  --foreground: #09090b;
   --card: #ffffff;
-  --card-foreground: #2a2119;
+  --card-foreground: #09090b;
   --popover: #ffffff;
-  --popover-foreground: #2a2119;
-  --primary: oklch(0.555 0.163 48.998);
-  --primary-foreground: oklch(0.987 0.022 95.277);
-  --secondary: #f2ebe1;
-  --secondary-foreground: #3a2e23;
-  --muted: #f2ebe1;
-  --muted-foreground: #6f6254;
-  --accent: #fdf0d8;
-  --accent-foreground: oklch(0.473 0.137 46.201);
+  --popover-foreground: #09090b;
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #6a7282;
+  --accent: #fff7ed;
+  --accent-foreground: #9f2d00;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: #ffffff;
   --destructive-soft: #fde9e6;
@@ -48,9 +40,20 @@
   --info: #3a6fc2;
   --info-soft: #e5eefb;
   --info-strong: #24497f;
-  --border: #e7dfd3;
-  --input: #968878;
-  --ring: oklch(0.555 0.163 48.998);
+  --border: #e4e4e7;
+  --input: #d4d4d8;
+  --ring: #09090b;
+  --orange: #ff6900;
+  --orange-strong: #f54900;
+  --court: #101828;
+  --court-end: #101828;
+  --court-foreground: #ffffff;
+  --court-spot: rgba(255, 255, 255, 0.12);
+  --court-soft: #f4f4f5;
+  --court-strong: #101828;
+  --gradient-band: var(--court);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-lift: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   --chart-1: oklch(0.879 0.169 91.605);
   --chart-2: oklch(0.769 0.188 70.08);
   --chart-3: oklch(0.666 0.179 58.318);
@@ -68,20 +71,20 @@
 
 .dark {
   color-scheme: dark;
-  --background: #1b1713;
-  --foreground: #f3ede5;
-  --card: #25201a;
-  --card-foreground: #f3ede5;
-  --popover: #25201a;
-  --popover-foreground: #f3ede5;
-  --primary: oklch(0.769 0.188 70.08);
-  --primary-foreground: oklch(0.279 0.077 45.635);
-  --secondary: #322b23;
-  --secondary-foreground: #f3ede5;
-  --muted: #2e2821;
-  --muted-foreground: #b5a898;
-  --accent: #3b2c19;
-  --accent-foreground: #fcd9a0;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #18181b;
+  --card-foreground: #fafafa;
+  --popover: #18181b;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: #3a1a06;
+  --accent-foreground: #ffb86a;
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: #2a0f0c;
   --destructive-soft: #3d1d1a;
@@ -95,9 +98,20 @@
   --info: #7aa7e8;
   --info-soft: #1a2940;
   --info-strong: #b6cff6;
-  --border: #3a3229;
-  --input: #7d7163;
-  --ring: oklch(0.769 0.188 70.08);
+  --border: #27272a;
+  --input: #52525b;
+  --ring: #fafafa;
+  --orange: #ff6900;
+  --orange-strong: #ff8904;
+  --court: #101828;
+  --court-end: #101828;
+  --court-foreground: #fafafa;
+  --court-spot: rgba(255, 255, 255, 0.1);
+  --court-soft: #27272a;
+  --court-strong: #d4d4d8;
+  --gradient-band: var(--court);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-lift: 0 10px 20px -4px rgba(0, 0, 0, 0.6), 0 4px 8px -4px rgba(0, 0, 0, 0.5);
   --chart-1: oklch(0.879 0.169 91.605);
   --chart-2: oklch(0.769 0.188 70.08);
   --chart-3: oklch(0.666 0.179 58.318);
@@ -114,8 +128,9 @@
 }
 
 @theme inline {
-  /* Geist / Geist Mono (Vercel, SIL OFL 1.1), self-hosted via @fontsource-variable/geist(-mono), imported in Layout.astro. */
-  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Manrope (the reference site's font) and Geist Mono (Vercel), both SIL OFL 1.1, self-hosted via
+     @fontsource-variable/manrope and @fontsource-variable/geist-mono, imported in Layout.astro. */
+  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -151,6 +166,14 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-orange: var(--orange);
+  --color-orange-strong: var(--orange-strong);
+  --color-court: var(--court);
+  --color-court-end: var(--court-end);
+  --color-court-foreground: var(--court-foreground);
+  --color-court-spot: var(--court-spot);
+  --color-court-soft: var(--court-soft);
+  --color-court-strong: var(--court-strong);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -175,7 +198,7 @@
   }
   /*
    * Native <select> popup: with color-scheme set, the browser otherwise paints the option
-   * list in a generic system grey that clashes with the warm graphite dark tokens. Pin the
+   * list in a generic system grey that clashes with the dark tokens. Pin the
    * options to the popover token pair so the list matches the rest of the UI in both themes.
    */
   select[data-slot="select"] option {
