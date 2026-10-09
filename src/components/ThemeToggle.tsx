@@ -53,8 +53,8 @@ export default function ThemeToggle({ lang, compact = false, menu = false, class
                 setThemePreference(value);
               }}
               className={cn(
-                "hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring rounded-sm px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2",
-                checked && "bg-accent text-accent-foreground",
+                "hover:bg-secondary hover:text-secondary-foreground focus-visible:ring-ring rounded-sm px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2",
+                checked && "bg-secondary text-secondary-foreground",
               )}
             >
               {label}
@@ -87,7 +87,7 @@ export default function ThemeToggle({ lang, compact = false, menu = false, class
             className={cn(
               "text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex h-8 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors outline-none focus-visible:ring-2",
               compact ? "w-8" : "px-3",
-              checked && "bg-accent text-accent-foreground shadow-xs",
+              checked && "bg-secondary text-secondary-foreground shadow-xs",
             )}
           >
             <Icon className="size-4" aria-hidden="true" />

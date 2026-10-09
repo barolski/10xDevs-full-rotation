@@ -217,7 +217,16 @@ export const pl = {
     waitlist: "Lista rezerwowa",
     youAreIn: "Jesteś na liście.",
     youWillMoveUp: "Awansujesz, jeśli ktoś się wypisze.",
-    spotsLeft: (free: number, size: number) => `Wolne miejsca na liście głównej: ${free} z ${size}.`,
+    spotsMinimumMissing: (missing: number) =>
+      `Do minimum brakuje jeszcze ${missing} ${plural("pl", missing, { one: "osoby", few: "osób", many: "osób", other: "osób" })}.`,
+    spotsMinimumReached: (free: number) =>
+      `Minimum zebrane — gramy. ${plural("pl", free, {
+        one: `Zostało ${free} miejsce.`,
+        few: `Zostały ${free} miejsca.`,
+        many: `Zostało ${free} miejsc.`,
+        other: `Zostało ${free} miejsc.`,
+      })}`,
+    signingUp: "Zapisuję…",
     mainFull: "Lista główna jest pełna — zapis teraz oznacza miejsce na liście rezerwowej.",
     signUp: "Zapisz się",
     withdraw: "Wypisz się",

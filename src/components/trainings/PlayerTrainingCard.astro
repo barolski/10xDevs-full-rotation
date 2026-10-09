@@ -1,27 +1,22 @@
 ---
 // The player's view of one training (/t/[id]); also rendered by /dev/training-kitchen-sink so the gate
 // shows the same markup the page ships.
-import { CircleCheck, CircleX, DoorOpen, Hourglass } from "lucide-react";
+import { MapPin } from "lucide-react";
 import SignupPanel from "@/components/trainings/SignupPanel.astro";
-import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatTrainingBand } from "@/lib/time";
 import type { Placement, Roster } from "@/lib/signups";
-import {
-  isSignupOpen,
-  TRAINING_STATUS_VARIANT,
-  trainingDisplayStatus,
-  type Training,
-  type TrainingDisplayStatus,
-} from "@/lib/trainings";
+import { isSignupOpen, trainingDisplayStatus, type Training, type TrainingDisplayStatus } from "@/lib/trainings";
 
-// One lucide glyph per display status; the colour comes from TRAINING_STATUS_VARIANT, the label from the dictionary.
-const STATUS_ICON: Record<TrainingDisplayStatus, typeof CircleCheck> = {
-  open: DoorOpen,
-  finalizing: Hourglass,
-  confirmed: CircleCheck,
-  cancelled: CircleX,
+// The dot in the band's status pill: orange while sign-ups run, the status colour otherwise. The pill itself is
+// one neutral surface (--court-spot) so it reads the same on the dark band in both themes.
+const STATUS_DOT: Record<TrainingDisplayStatus, string> = {
+  open: "bg-orange",
+  finalizing: "bg-warning",
+  confirmed: "bg-success",
+  cancelled: "bg-destructive",
 };
 
 interface Props {
@@ -58,24 +53,34 @@ const {
 const open = training ? isSignupOpen(new Date(training.starts_at), now) : false;
 const display = training ? trainingDisplayStatus(training, now) : null;
 const dictionary = t(Astro.locals.lang);
-const badgeVariant = display ? TRAINING_STATUS_VARIANT[display] : undefined;
 const badgeLabel = display ? dictionary.training.status[display] : null;
-const StatusIcon = display ? STATUS_ICON[display] : null;
+const statusDot = display ? STATUS_DOT[display] : null;
 ---
 
-<Card className="w-full">
+<Card className="w-full overflow-hidden py-0">
   {training ? (
     <>
-      <CardHeader className="gap-3">
-        <span class:list={[badgeVariants({ variant: badgeVariant })]}>
-          {StatusIcon && <StatusIcon className="size-3.5" aria-hidden="true" />}
-          {badgeLabel}
-        </span>
+      <div class="bg-[image:var(--gradient-band)] text-court-foreground space-y-3 px-6 py-5 shadow-[var(--shadow-lift)]">
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <span class="bg-court-spot inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
+            <span class:list={["size-2 rounded-full", statusDot]} aria-hidden="true" />
+            {badgeLabel}
+          </span>
+          <span class="text-court-foreground/80 flex min-w-0 items-center gap-1.5 text-sm">
+            <MapPin className="size-4 shrink-0" aria-hidden="true" />
+            <span class="min-w-0 break-words">{training.location}</span>
+          </span>
+        </div>
+        <p class="text-[34px] leading-[1.1] font-bold tracking-[-0.02em]">
+          {formatTrainingBand(new Date(training.starts_at), Astro.locals.lang)}
+        </p>
+      </div>
+      <CardHeader className="pt-6">
         <CardTitle className="text-2xl leading-tight font-semibold tracking-tight text-balance break-words">
           <h1>{training.title}</h1>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-6">
         {/* SignupPanel owns the details too, so it can put them beside the rosters when there is room. */}
         <SignupPanel
           training={training}
@@ -92,7 +97,7 @@ const StatusIcon = display ? STATUS_ICON[display] : null;
         />
       </CardContent>
       {isOrganizer && (
-        <CardFooter className="border-t">
+        <CardFooter className="justify-end border-t pb-6">
           <a href={`/organizer/trainings/${training.id}`} class:list={[buttonVariants({ variant: "outline" })]}>
             {dictionary.signup.manage}
           </a>
@@ -101,12 +106,12 @@ const StatusIcon = display ? STATUS_ICON[display] : null;
     </>
   ) : (
     <>
-      <CardHeader>
+      <CardHeader className="pt-6">
         <CardTitle className="text-2xl leading-tight font-semibold tracking-tight">
           <h1>{unavailable.title}</h1>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-6">
         <p class="text-muted-foreground text-sm">{unavailable.message}</p>
       </CardContent>
     </>

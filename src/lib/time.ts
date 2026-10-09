@@ -63,6 +63,29 @@ function createDisplayFormatter(lang: Lang) {
   });
 }
 
+// The band on the player training card: weekday, day, month and time, no year.
+const bandFormatters: Record<Lang, Intl.DateTimeFormat> = {
+  pl: createBandFormatter("pl"),
+  en: createBandFormatter("en"),
+};
+
+function createBandFormatter(lang: Lang) {
+  return new Intl.DateTimeFormat(LOCALES[lang], {
+    timeZone: TRAINING_TIME_ZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
+// e.g. "wt., 13 paź, 19:30" (pl) / "Tue, 13 Oct, 19:30" (en)
+export function formatTrainingBand(instant: Date, lang: Lang): string {
+  return bandFormatters[lang].format(instant);
+}
+
 // e.g. "wt., 6 paź 2026, 19:00" (pl) / "Tue, 6 Oct 2026, 19:00" (en)
 export function formatTrainingDateTime(instant: Date, lang: Lang): string {
   return displayFormatters[lang].format(instant);

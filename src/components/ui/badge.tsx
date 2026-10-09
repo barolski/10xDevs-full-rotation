@@ -19,7 +19,7 @@ const badgeVariants = cva(
         success: "border-transparent bg-success-soft text-success-strong",
         warning: "border-transparent bg-warning-soft text-warning-strong",
         info: "border-transparent bg-info-soft text-info-strong",
-        accent: "border-transparent bg-accent text-accent-foreground",
+        accent: "border-transparent bg-orange text-white",
       },
     },
     defaultVariants: {

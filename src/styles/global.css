@@ -51,7 +51,7 @@
   --court-spot: rgba(255, 255, 255, 0.12);
   --court-soft: #f4f4f5;
   --court-strong: #101828;
-  --gradient-band: var(--court);
+  --gradient-band: linear-gradient(var(--court), var(--court));
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-lift: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   --chart-1: oklch(0.879 0.169 91.605);
@@ -109,7 +109,7 @@
   --court-spot: rgba(255, 255, 255, 0.1);
   --court-soft: #27272a;
   --court-strong: #d4d4d8;
-  --gradient-band: var(--court);
+  --gradient-band: linear-gradient(var(--court), var(--court));
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-lift: 0 10px 20px -4px rgba(0, 0, 0, 0.6), 0 4px 8px -4px rgba(0, 0, 0, 0.5);
   --chart-1: oklch(0.879 0.169 91.605);

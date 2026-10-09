@@ -1,19 +1,20 @@
 ---
 // The player's view of one training's body on /t/[id]: details and the sign-up action on top, then
-// the main list and the waitlist side by side once there is room for two columns (stacked below that).
+// the main list and the waitlist beside it once there is room for two columns (stacked below that).
 // Also rendered by /dev/training-kitchen-sink, so the gate shows the markup the page ships.
 //
 // The breakpoint is a container query, not a viewport one: this panel is rendered both full-width on
 // the page and inside narrow kitchen-sink cards, and it should follow its own width in each.
 import { CircleAlert, CircleCheck, Users } from "lucide-react";
 import RosterList from "@/components/trainings/RosterList.astro";
+import SpotsMeter from "@/components/trainings/SpotsMeter.astro";
 import TrainingDetails from "@/components/trainings/TrainingDetails.astro";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { freeMainSlots, MAIN_LIST_SIZE, signupErrorMessage, type Placement, type Roster } from "@/lib/signups";
+import { MAIN_LIST_SIZE, signupErrorMessage, type Placement, type Roster } from "@/lib/signups";
 import { canWithdraw, type Training } from "@/lib/trainings";
 import { blockReason } from "@/lib/attendance";
 
@@ -51,7 +52,6 @@ const { lang } = Astro.locals;
 const d = t(lang).signup;
 const errorMessage = signupErrorMessage(error, lang);
 const noticeMessage = notice === "signed_up" ? d.notice.signedUp : notice === "withdrawn" ? d.notice.withdrawn : null;
-const free = freeMainSlots(roster);
 
 // Withdrawal outlives the sign-up window: a confirmed training accepts it until it starts, so the
 // first waitlisted player can be promoted (FR-016). Sign up stays gated to `open`. `lateWithdraw` is
@@ -71,69 +71,79 @@ const lateWithdraw = showWithdraw && !open;
       <AlertDescription>{errorMessage}</AlertDescription>
     </Alert>
   )}
-  {noticeMessage && !errorMessage && (
-    <Alert>
-      <CircleCheck />
-      <AlertDescription>{noticeMessage}</AlertDescription>
-    </Alert>
-  )}
 
-  <div class="space-y-6">
-    <TrainingDetails training={training} now={now} />
+  {/* Two columns from @2xl: the action column (notice, status, meter, button, details) beside the rosters;
+      stacked below that, where each list would be too narrow for a name, rank and the "you" pill. */}
+  <div class="grid items-start gap-6 @2xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+    <div class="space-y-4">
+      {noticeMessage && !errorMessage && (
+        <Alert>
+          <CircleCheck />
+          <AlertDescription>{noticeMessage}</AlertDescription>
+        </Alert>
+      )}
 
-    {/* The player's own status comes first: it is the one fact they opened the link for.
-        Suppressed entirely when the roster could not be read: an empty roster would otherwise be
-        reported as twelve free slots, and a player already on the list would be offered Sign up. */}
-    {!failed && (
-      <div class="space-y-3">
-        {placement ? (
-          <p class="flex flex-wrap items-center gap-2">
-            <span class:list={[badgeVariants({ variant: placement.list === "main" ? "success" : "secondary" })]}>
-              {placement.list === "main" ? (
-                <CircleCheck className="size-3.5" aria-hidden="true" />
-              ) : (
-                <Users className="size-3.5" aria-hidden="true" />
-              )}
-              {placement.list === "main" ? d.mainList : d.waitlist}
-              <span class="tabular-nums">#{placement.rank}</span>
-            </span>
-            <span class="text-muted-foreground text-sm">
-              {placement.list === "main" ? d.youAreIn : d.youWillMoveUp}
-            </span>
-          </p>
-        ) : (
-          <p class="text-muted-foreground text-sm">{free > 0 ? d.spotsLeft(free, MAIN_LIST_SIZE) : d.mainFull}</p>
-        )}
+      {/* The player's own status comes first: it is the one fact they opened the link for.
+          Suppressed entirely when the roster could not be read: an empty roster would otherwise be
+          reported as twelve free slots, and a player already on the list would be offered Sign up. */}
+      {!failed && (
+        <div class="space-y-4">
+          {placement && (
+            <p class="flex flex-wrap items-center gap-2">
+              <span class:list={[badgeVariants({ variant: placement.list === "main" ? "success" : "secondary" })]}>
+                {placement.list === "main" ? (
+                  <CircleCheck className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <Users className="size-3.5" aria-hidden="true" />
+                )}
+                {placement.list === "main" ? d.mainList : d.waitlist}
+                <span class="tabular-nums">#{placement.rank}</span>
+              </span>
+              <span class="text-muted-foreground text-sm">
+                {placement.list === "main" ? d.youAreIn : d.youWillMoveUp}
+              </span>
+            </p>
+          )}
 
-        {showWithdraw && (
-          <form method="POST" action={`/api/trainings/${training.id}/withdraw`} class="space-y-2">
-            <button type="submit" class:list={[cn(buttonVariants({ variant: "outline" }), "w-full")]}>
-              {d.withdraw}
-            </button>
-            {lateWithdraw && <p class="text-muted-foreground text-xs">{d.lateWithdrawNote}</p>}
-          </form>
-        )}
-        {showSignup && (
-          <form method="POST" action={`/api/trainings/${training.id}/signup`}>
-            <button type="submit" class:list={[cn(buttonVariants(), "w-full")]}>
-              {d.signUp}
-            </button>
-          </form>
-        )}
-        {showBlocked && (
-          <p role="alert" class="bg-warning-soft text-warning-strong rounded-md px-3 py-2 text-sm">
-            {blockReason(absences, lang)}
-          </p>
-        )}
+          <SpotsMeter taken={roster.main.length} />
+
+          {showWithdraw && (
+            <form method="POST" action={`/api/trainings/${training.id}/withdraw`} class="space-y-2">
+              <button type="submit" class:list={[cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")]}>
+                {d.withdraw}
+              </button>
+              {lateWithdraw && <p class="text-muted-foreground text-xs">{d.lateWithdrawNote}</p>}
+            </form>
+          )}
+          {showSignup && (
+            <form method="POST" action={`/api/trainings/${training.id}/signup`} data-signup-form>
+              <button
+                type="submit"
+                data-signing-up-label={d.signingUp}
+                class:list={[cn(buttonVariants({ size: "lg" }), "w-full")]}
+              >
+                {d.signUp}
+              </button>
+            </form>
+          )}
+          {showBlocked && (
+            <p role="alert" class="bg-destructive-soft text-destructive-strong rounded-lg px-3 py-2 text-sm">
+              {blockReason(absences, lang)}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div class="border-t pt-4">
+        <TrainingDetails training={training} now={now} hideInBand />
       </div>
-    )}
+    </div>
 
     {failed ? (
       <p class="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">{d.rosterUnavailable}</p>
     ) : (
-      <div class="grid items-start gap-4 @lg:grid-cols-2 @lg:gap-6">
-        {/* Two columns from @lg; stacked below, where each list would be too narrow for a name, rank
-            and the "you" pill. The waitlist always renders so the columns stay balanced when empty. */}
+      <div class="grid items-start gap-4 @5xl:grid-cols-2">
+        {/* The waitlist always renders so the two lists keep the same shape when it is empty. */}
         <RosterList
           title={d.mainList}
           entries={roster.main}
@@ -152,3 +162,18 @@ const lateWithdraw = showWithdraw && !open;
     )}
   </div>
 </div>
+
+<script>
+  // The submit event has fired by the time this runs; disabling the button inside the click handler would
+  // cancel the POST, so wait one tick.
+  document.querySelectorAll<HTMLFormElement>("form[data-signup-form]").forEach((form) => {
+    form.addEventListener("submit", () => {
+      const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
+      if (!button) return;
+      setTimeout(() => {
+        button.disabled = true;
+        button.textContent = button.dataset.signingUpLabel ?? button.textContent;
+      }, 0);
+    });
+  });
+</script>

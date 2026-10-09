@@ -22,42 +22,40 @@ const { title, entries, emptyLabel, highlightUserId, count, showRank = true } = 
 const youLabel = t(Astro.locals.lang).signup.you;
 ---
 
-<section class="space-y-2">
-  <h2 class="flex items-baseline justify-between gap-2 text-sm font-medium">
+<section class="dark:border-input space-y-2 rounded-lg border p-3">
+  <h2 class="flex items-baseline justify-between gap-2 px-1 text-sm font-semibold">
     <span>{title}</span>
-    {count && <span class="text-muted-foreground text-xs tabular-nums">{count}</span>}
+    {count && <span class="text-muted-foreground font-mono text-xs tabular-nums">{count}</span>}
   </h2>
   {entries.length === 0 ? (
-    <p class="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-sm dark:border-input">
-      {emptyLabel}
-    </p>
+    <p class="text-muted-foreground p-3 text-center text-sm">{emptyLabel}</p>
   ) : (
-    <ol class="space-y-0.5 rounded-lg border p-1.5 dark:border-input">
+    <ol class="space-y-0.5">
       {entries.map((entry, index) => {
         // The signed-in player's row is highlighted as a rounded inset pill, not a full-bleed band:
-        // the list has inner padding and gaps, so the accent fill is a self-contained rounded cell
-        // with its own corners. The accent pair (background + matching foreground) keeps it readable
+        // the list has inner padding and gaps, so the primary fill is a self-contained rounded cell
+        // with its own corners. The primary pair (background + matching foreground) keeps it readable
         // in both themes, where a translucent tint alone would wash out in the dark theme.
         const isMe = entry.user_id === highlightUserId;
         return (
           <li
             class:list={[
-              "flex items-center gap-3 rounded-md px-2.5 py-1.5 text-sm",
-              isMe && "bg-accent text-accent-foreground font-medium",
+              "flex items-center gap-3 rounded-full px-2.5 py-1.5 text-sm",
+              isMe && "bg-primary text-primary-foreground font-semibold",
             ]}
           >
             {showRank && (
               <span
                 class:list={[
-                  "w-5 text-right text-xs tabular-nums",
-                  isMe ? "text-accent-foreground/80" : "text-muted-foreground",
+                  "w-6 text-right font-mono text-xs tabular-nums",
+                  isMe ? "text-primary-foreground/70" : "text-muted-foreground",
                 ]}
               >
-                {index + 1}
+                {String(index + 1).padStart(2, "0")}
               </span>
             )}
             <span class="min-w-0 break-words">{rosterLabel(entry)}</span>
-            {isMe && <span class="ml-auto text-xs font-semibold tracking-wide uppercase">{youLabel}</span>}
+            {isMe && <span class="ml-auto text-[11px] font-semibold tracking-wide uppercase">{youLabel}</span>}
           </li>
         );
       })}
