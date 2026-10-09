@@ -70,6 +70,11 @@ interface State {
   rosterFailed?: boolean;
   notice?: "signed_up" | "withdrawn" | null;
   error?: string | null;
+  // Defaults to the signed-in player (ME); null renders the view signed out.
+  userId?: string | null;
+  // The no-show lockout: replaces the sign-up action with the reason.
+  blocked?: boolean;
+  absences?: number;
 }
 
 const states: State[] = [
@@ -90,6 +95,9 @@ const states: State[] = [
     training: base,
     signups: entries(MAIN_LIST_SIZE + 2, { includeMeAt: MAIN_LIST_SIZE + 1 }),
   },
+  { label: "Open, minimum reached, not signed up", training: base, signups: entries(10) },
+  { label: "Signed out (no account)", training: base, signups: entries(5), userId: null },
+  { label: "Blocked player (2 absences)", training: base, signups: entries(5), blocked: true, absences: 2 },
   { label: "Nobody signed up yet", training: base, signups: [] },
   { label: "Just withdrawn", training: base, signups: entries(6), notice: "withdrawn" },
   {
@@ -210,8 +218,10 @@ const states: State[] = [
                 now={now}
                 isOrganizer={state.organizer ?? false}
                 roster={roster}
-                placement={placementOf(roster, ME)}
-                userId={ME}
+                placement={state.userId === null ? null : placementOf(roster, state.userId ?? ME)}
+                userId={state.userId === null ? undefined : (state.userId ?? ME)}
+                blocked={state.blocked ?? false}
+                absences={state.absences ?? 0}
                 rosterFailed={state.rosterFailed ?? false}
                 notice={state.notice ?? null}
                 error={state.error ?? null}
