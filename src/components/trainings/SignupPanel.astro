@@ -170,10 +170,21 @@ const lateWithdraw = showWithdraw && !open;
     form.addEventListener("submit", () => {
       const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
       if (!button) return;
+      const label = button.textContent;
       setTimeout(() => {
         button.disabled = true;
-        button.textContent = button.dataset.signingUpLabel ?? button.textContent;
+        button.textContent = button.dataset.signingUpLabel ?? label;
       }, 0);
+      // Back/forward cache restores the page as it was left: put the button back.
+      window.addEventListener(
+        "pageshow",
+        (event) => {
+          if (!event.persisted) return;
+          button.disabled = false;
+          button.textContent = label;
+        },
+        { once: true },
+      );
     });
   });
 </script>

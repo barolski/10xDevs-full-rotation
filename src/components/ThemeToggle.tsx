@@ -87,7 +87,7 @@ export default function ThemeToggle({ lang, compact = false, menu = false, class
             className={cn(
               "text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex h-8 items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors outline-none focus-visible:ring-2",
               compact ? "w-8" : "px-3",
-              checked && "bg-secondary text-secondary-foreground shadow-xs",
+              checked && "bg-card text-foreground shadow-xs",
             )}
           >
             <Icon className="size-4" aria-hidden="true" />

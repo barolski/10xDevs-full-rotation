@@ -34,7 +34,7 @@ const onHome = Astro.url.pathname === "/";
           aria-current={onOrganizerPage ? "page" : undefined}
           class:list={[
             buttonVariants({ variant: "ghost", size: "sm" }),
-            onOrganizerPage && "bg-secondary text-secondary-foreground",
+            onOrganizerPage && "bg-secondary text-foreground font-semibold",
           ]}
         >
           {dictionary.header.trainings}
@@ -47,7 +47,7 @@ const onHome = Astro.url.pathname === "/";
             aria-current={onDashboard ? "page" : undefined}
             class:list={[
               buttonVariants({ variant: "ghost", size: "sm" }),
-              onDashboard && "bg-secondary text-secondary-foreground",
+              onDashboard && "bg-secondary text-foreground font-semibold",
             ]}
           >
             {dictionary.header.dashboard}
