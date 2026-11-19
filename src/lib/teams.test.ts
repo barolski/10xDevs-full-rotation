@@ -182,26 +182,50 @@ describe("generateTeams invariants", () => {
     expect(result.exceededBy).toBeGreaterThan(0);
   });
 
-  it("meets the target on a roster that can be balanced", () => {
-    const result = generateTeams(ROSTERS["full six-a-side with two setters"]);
+  const BALANCEABLE: Record<string, TeamPlayer[]> = {
+    "full six-a-side with two setters": ROSTERS["full six-a-side with two setters"],
+    "mirrored pairs of equal ratings": roster([
+      [8, "setter"],
+      [8, "setter"],
+      [6, "outside"],
+      [6, "outside"],
+      [5, "middle"],
+      [5, "middle"],
+      [7, "opposite"],
+      [7, "opposite"],
+    ]),
+    "seven players who all share one rating": roster(Array.from({ length: 7 }, (): Spec => [6, "outside"])),
+  };
+
+  it.each(Object.entries(BALANCEABLE))("meets the target on a roster that can be balanced: %s", (_name, input) => {
+    const result = generateTeams(input);
 
     expect(result.balanced).toBe(true);
     expect(result.exceededBy).toBe(0);
     expect(result.avgDiff).toBeLessThanOrEqual(TEAM_AVG_DIFF_MAX);
   });
 
-  it("counts an unrated player as the lowest rating, not a middle one", () => {
+  it("counts an unrated player as the lowest rating (0), not a middle one", () => {
+    // Every split puts the unrated player on a team of two with a 6: averages 3 and 6. With a middle default
+    // (5) they would be 5.5 and 6, and the target would be met.
     const result = generateTeams(
       roster([
         [UNRATED_RATING, "outside"],
-        [UNRATED_RATING, "outside"],
-        [UNRATED_RATING, "middle"],
-        [UNRATED_RATING, "middle"],
+        [6, "outside"],
+        [6, "middle"],
+        [6, "middle"],
       ]),
     );
 
-    expect(result.averages).toEqual({ A: 0, B: 0 });
-    expect(result.balanced).toBe(true);
+    expect([result.averages.A, result.averages.B].sort((a, b) => a - b)).toEqual([3, 6]);
+    expect(result.balanced).toBe(false);
+    expect(result.exceededBy).toBe(2.5);
+  });
+
+  it("counts a secondary-position setter as a real setter", () => {
+    expect(isSetter({ primaryPosition: "outside", secondaryPosition: "setter" })).toBe(true);
+    expect(isSetter({ primaryPosition: "outside", secondaryPosition: "middle" })).toBe(false);
+    expect(isSetter({ primaryPosition: null, secondaryPosition: null })).toBe(false);
   });
 });
 

@@ -13,8 +13,10 @@ interface Definition {
   body: string;
 }
 
-// The latest migration (by filename order) that defines the function wins; its body runs up to the next
-// top-level `create`. `--` comments are stripped so a number mentioned in prose cannot match.
+// The latest migration (by filename order) that defines the function wins. Its body is the `as $$ ... $$` block
+// right after the header, so statements that follow it (comments, grants) cannot leak in. Comments that start at
+// the beginning of a line or after whitespace are stripped so a number mentioned in prose cannot match; a `--`
+// inside a string literal that follows other text is left alone.
 function latestDefinition(functionName: string): Definition {
   const header = new RegExp(`create\\s+(?:or\\s+replace\\s+)?function\\s+public\\.${functionName}\\s*\\(`, "i");
   const files = readdirSync(MIGRATIONS_DIR)
@@ -22,12 +24,12 @@ function latestDefinition(functionName: string): Definition {
     .sort();
 
   for (const file of files.toReversed()) {
-    const sql = readFileSync(path.join(MIGRATIONS_DIR, file), "utf8").replace(/--.*$/gm, "");
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
     const start = sql.search(header);
     if (start < 0) continue;
-    const rest = sql.slice(start + 1);
-    const next = rest.search(/\bcreate\s/i);
-    return { file, body: next < 0 ? rest : rest.slice(0, next) };
+    const dollarBody = /\bas\s+\$\$([\s\S]*?)\$\$/i.exec(sql.slice(start));
+    if (!dollarBody) throw new Error(`${file}: public.${functionName} has no \`as $$ ... $$\` body; update this test`);
+    return { file, body: dollarBody[1].replace(/(^|\s)--.*$/gm, "$1") };
   }
   throw new Error(`No migration in ${MIGRATIONS_DIR} defines public.${functionName}`);
 }
@@ -42,7 +44,9 @@ describe("TS constants that mirror SQL", () => {
   it("ABSENCE_WINDOW matches the trailing-training window in lockout_absences", () => {
     const sql = latestDefinition("lockout_absences");
 
-    expect(numberAfter(sql, /\blimit\s+(\d+)/i, "the window `limit N`")).toBe(ABSENCE_WINDOW);
+    expect(numberAfter(sql, /\bwindow8\s+as\s*\([\s\S]*?\blimit\s+(\d+)/i, "the window8 `limit N`")).toBe(
+      ABSENCE_WINDOW,
+    );
   });
 
   it("ABSENCE_LIMIT matches the absence threshold in is_blocked", () => {
@@ -65,9 +69,19 @@ describe("TS constants that mirror SQL", () => {
     expect(numberAfter(sql, /\)\s*>=\s*(\d+)\s*then/i, "the `) >= N then` main-list check")).toBe(MAIN_LIST_SIZE);
   });
 
+  it("the promotion offset in promote_after_withdrawal is the last main-list rank (MAIN_LIST_SIZE - 1)", () => {
+    const sql = latestDefinition("promote_after_withdrawal");
+
+    expect(numberAfter(sql, /\boffset\s+(\d+)/i, "the `offset N` that picks the next player")).toBe(MAIN_LIST_SIZE - 1);
+  });
+
   it("MAIN_LIST_SIZE matches the main-list size in lockout_absences", () => {
     const sql = latestDefinition("lockout_absences");
 
     expect(numberAfter(sql, /\)\s*<\s*(\d+)/, "the `) < N` main-list check")).toBe(MAIN_LIST_SIZE);
+  });
+
+  it("MAIN_LIST_SIZE is 12, the figure the product rules state", () => {
+    expect(MAIN_LIST_SIZE).toBe(12);
   });
 });
