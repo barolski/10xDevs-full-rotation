@@ -35,7 +35,7 @@ jobs:
           cache: npm
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.117.0
       - run: npm ci
       - run: npx wrangler types
       - name: Start local Supabase
