@@ -225,6 +225,31 @@ export async function counts(db: Db): Promise<Counts> {
   return only(rows, "counts row");
 }
 
+/**
+ * `signups` players signed up (in order) for a fresh training, which is then marked `confirmed` directly as the table
+ * owner. That is the state close_due_trainings() leaves behind (tested in close-training.test.ts) without running the
+ * finalizer, which would also touch every other due training in the local database - and these tests may commit.
+ */
+export async function confirmedTraining(
+  db: Db,
+  options: { signups: number; title?: string },
+): Promise<{ training: string; players: string[] }> {
+  const players = await createPlayers(db, options.signups);
+  const training = await createTraining(db, { title: options.title });
+  for (const player of players) await signUp(db, player, training);
+  await db.query("update public.trainings set status = 'confirmed', closed_at = now() where id = $1", [training]);
+  return { training, players };
+}
+
+/** User ids of the sign-ups that carry a promotion stamp, ordered by queue position. */
+export async function promotedUsers(db: Db, trainingId: string): Promise<string[]> {
+  const { rows } = await db.query<{ user_id: string }>(
+    "select user_id from public.signups where training_id = $1 and promoted_at is not null order by position",
+    [trainingId],
+  );
+  return rows.map((row) => row.user_id);
+}
+
 /** Deletes everything the committed tests leave behind (trainings cascade to their sign-ups, users to profiles). */
 export async function sweepTestData(db: Db): Promise<void> {
   await db.query("delete from public.trainings where title like 'E2E DB %'");
