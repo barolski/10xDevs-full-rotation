@@ -58,6 +58,17 @@ export async function asUser<T>(db: Db, userId: string, fn: () => Promise<T>): P
   }
 }
 
+/** Runs `fn` as a signed-out visitor: role `anon`, no JWT subject, for this transaction. */
+export async function asAnon<T>(db: Db, fn: () => Promise<T>): Promise<T> {
+  await db.query("set local role anon");
+  await db.query("select set_config('request.jwt.claims', '', true)");
+  try {
+    return await fn();
+  } finally {
+    await db.query("reset role").catch(() => undefined);
+  }
+}
+
 export type Attempt<T> =
   { ok: true; value: T } | { ok: false; code: string; message: string; constraint: string | undefined };
 
