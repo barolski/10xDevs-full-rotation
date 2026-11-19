@@ -55,6 +55,7 @@ npm run dev
 - `npm run lint` - Run ESLint with type-checked rules
 - `npm run lint:fix` - Auto-fix ESLint issues
 - `npm run format` - Run Prettier
+- `npm test` - Run the Vitest unit tests (`src/**/*.test.ts`, Node environment, no database)
 - `npm run smoke` - Smoke test the auth flow against a running server (`BASE_URL`, defaults to `http://localhost:4321`)
 
 ## Project Structure
@@ -213,7 +214,7 @@ set session_replication_role = default;
 
 `public.signups` holds one row per sign-up attempt on a training, reached from the shared `/t/<id>` link.
 
-- The main list holds **12** players; everyone after them is on the waitlist. Placement is **derived**, not stored: the main list is the first 12 *active* sign-ups by `position`, so a withdrawal before sign-ups close pulls the next player up with no extra write. `MAIN_LIST_SIZE` in `src/lib/signups.ts` is mirrored by a comment in the migration.
+- The main list holds **12** players; everyone after them is on the waitlist. Placement is **derived**, not stored: the main list is the first 12 _active_ sign-ups by `position`, so a withdrawal before sign-ups close pulls the next player up with no extra write. `MAIN_LIST_SIZE` in `src/lib/signups.ts` is mirrored by a comment in the migration.
 - `position` is the queue number the database hands out in sign-up order, under a per-training advisory lock. Two players racing for the last slot are serialized; a unique index on `(training_id, position)` is the backstop.
 - A player may hold **one active sign-up per training** (partial unique index) and **no two active sign-ups for trainings starting less than 120 minutes apart** (`overlapping_signup`). The waitlist counts, because a waitlisted player can be promoted.
 - Signing up after the window closed is rejected (`signup_closed`). Withdrawing is **allowed by the database at any time** — a late withdrawal counts as an absence and a post-confirmation one promotes a waitlisted player, both owned by later slices — but the app only offers the button while sign-ups are open.
@@ -279,13 +280,13 @@ BASE_URL=http://localhost:4321 npm run smoke
 
 > **Warning:** `npm run build` copies `.dev.vars` into `dist/server/.dev.vars`, so a build made while `.dev.vars` pointed at a cloud project keeps using it in `npm run preview`. Rebuild after switching. Never run the smoke test against production Supabase: each run creates a real `smoke-*@example.com` account there.
 
-> **Note:** this script exists primarily to guard the development of the starter itself — it is a fast sanity check that dependency upgrades did not break the build, the Cloudflare adapter or the Supabase auth flow. It is **not** a substitute for a real test suite. Once you build your own product on top of this starter, add proper tests (unit, integration, end-to-end) suited to your application.
+> **Note:** this script exists primarily to guard the development of the starter itself — it is a fast sanity check that dependency upgrades did not break the build, the Cloudflare adapter or the Supabase auth flow. It is **not** a substitute for a real test suite. Pure business logic is covered by the Vitest unit tests (`npm test`); database-level and end-to-end tests are still to come.
 
 ## CI
 
 GitHub Actions runs two jobs on every push and PR to `master`:
 
-- **ci** — lint, `astro check` and build. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets for the build step.
+- **ci** — lint, `astro check`, unit tests (`npm test`) and build. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets for the build step.
 - **smoke** — starts a local Supabase via the Supabase CLI, builds, serves the production preview on the Cloudflare runtime and runs `npm run smoke` against it. No secrets required.
 
 ## License
