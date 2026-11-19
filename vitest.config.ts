@@ -5,5 +5,5 @@ import { defineConfig } from "vitest/config";
 // src/lib logic neither need nor want.
 export default defineConfig({
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
-  test: { environment: "node", include: ["src/**/*.test.ts"] },
+  test: { environment: "node", include: ["src/**/*.test.ts", "scripts/**/*.test.mjs"] },
 });
