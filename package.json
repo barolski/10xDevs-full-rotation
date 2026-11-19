@@ -16,7 +16,8 @@
     "db:reset": "supabase db reset",
     "db:new": "supabase migration new",
     "db:push": "supabase db push",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:db": "vitest run --config vitest.db.config.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
@@ -47,6 +48,7 @@
     "@eslint/compat": "^2.1.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.65.1",
+    "@types/pg": "^8.23.1",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-astro": "^3.1.0",
@@ -56,6 +58,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "9.1.7",
     "lint-staged": "^16.3.3",
+    "pg": "^8.23.1",
     "prettier": "^3.9.6",
     "prettier-plugin-astro": "^1.0.0",
     "prettier-plugin-tailwindcss": "^0.8.1",
