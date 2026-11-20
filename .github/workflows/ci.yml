@@ -58,8 +58,59 @@ jobs:
       - if: always()
         run: supabase stop --no-backup
 
+  # DB integration (Vitest + pg) and Playwright e2e share one local Supabase stack. Both are slow
+  # (the close-window e2e waits ~3 min for the real 3-hour boundary), so they run beside `ci` and `smoke`.
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+      - run: npm ci
+      - run: npx wrangler types
+      - name: Start local Supabase
+        run: |
+          supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta,supavisor
+          supabase status -o env | grep -E '^(API_URL|ANON_KEY)=' > supabase.env
+      - name: Database integration tests
+        run: npm run test:db
+      - name: Configure secrets, e2e accounts and browser
+        run: |
+          source supabase.env
+          E2E_USERNAME="e2e-player@example.com"
+          E2E_PASSWORD="E2e-Test-Passw0rd!"
+          curl -sf "$API_URL/auth/v1/signup"             -H "apikey: $ANON_KEY" -H "Content-Type: application/json"             -d "{\"email\":\"$E2E_USERNAME\",\"password\":\"$E2E_PASSWORD\"}" > /dev/null
+          {
+            echo "SUPABASE_URL=$API_URL"
+            echo "SUPABASE_KEY=$ANON_KEY"
+            echo "E2E_USERNAME=$E2E_USERNAME"
+            echo "E2E_PASSWORD=$E2E_PASSWORD"
+            echo "E2E_ORGANIZER_USERNAME=organizer@example.com"
+            echo "E2E_ORGANIZER_PASSWORD=Organizer-Passw0rd!"
+          } > .env
+          cp .env .dev.vars
+          npx playwright install --with-deps chromium
+      - name: E2E tests (Playwright builds and serves the app itself)
+        run: npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+      - if: always()
+        run: supabase stop --no-backup
+
   deploy:
-    needs: [ci, smoke]
+    needs: [ci, smoke, integration]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     concurrency:
