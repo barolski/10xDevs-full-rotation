@@ -12,12 +12,14 @@ interface Props {
   lang: Lang;
   // The error *code* from the redirect (e.g. "user_already_exists"); shown as a message in `lang`.
   serverError?: string | null;
+  // Email typed before a failed attempt, handed back by the page (never the password).
+  initialEmail?: string;
   next?: string | null;
 }
 
-export default function SignUpForm({ lang, serverError, next: nextPath }: Props) {
+export default function SignUpForm({ lang, serverError, initialEmail = "", next: nextPath }: Props) {
   const d = t(lang).auth;
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
