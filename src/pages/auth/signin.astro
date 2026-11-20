@@ -4,11 +4,15 @@ import SignInForm from "@/components/auth/SignInForm";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { t } from "@/i18n";
 import { safeNext, withNext } from "@/lib/redirect";
+import { takeFlashEmail } from "@/lib/auth-flash";
 
 const { lang } = Astro.locals;
 const d = t(lang).auth.signIn;
 // A short error code from the sign-in route (never text); the form turns it into a message.
 const error = Astro.url.searchParams.get("error");
+// Read on every visit so the cookie is cleared even without an error; shown only next to one.
+const flashed = takeFlashEmail(Astro.cookies);
+const initialEmail = error ? flashed : "";
 const next = safeNext(Astro.url.searchParams.get("next"));
 ---
 
@@ -22,7 +26,7 @@ const next = safeNext(Astro.url.searchParams.get("next"));
         <CardDescription>{d.description}</CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
-        <SignInForm lang={lang} serverError={error} next={next} client:load />
+        <SignInForm lang={lang} serverError={error} initialEmail={initialEmail} next={next} client:load />
       </CardContent>
       <CardFooter className="justify-center">
         <p class="text-muted-foreground text-sm">

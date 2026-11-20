@@ -146,6 +146,34 @@ async function request(path, { method = "GET", form } = {}) {
   return { status: response.status, location: response.headers.get("location") ?? "" };
 }
 
+// A failed sign-in as an anonymous visitor (its own cookies, not the jar): the typed email must come back
+// through the one-shot cookie only, the page must show it once, and neither the URL nor the page may carry
+// the password.
+async function typedEmailRoundTrip() {
+  const failed = await fetch(BASE_URL + "/api/auth/signin", {
+    method: "POST",
+    redirect: "manual",
+    headers: { Origin: BASE_URL, "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ email, password: "wrong" }).toString(),
+  });
+  const location = failed.headers.get("location") ?? "";
+  const flash = failed.headers.getSetCookie().find((c) => c.startsWith("fr-auth-email="));
+  const cookie = flash?.split(";")[0] ?? "";
+  const page = await fetch(BASE_URL + location, { redirect: "manual", headers: { Cookie: cookie } });
+  const html = await page.text();
+  const cleared = page.headers
+    .getSetCookie()
+    .some((c) => c.startsWith("fr-auth-email=") && /expires=thu, 01 jan 1970|max-age=0/i.test(c));
+  const detail = [
+    `url=${location.includes(email) || location.includes("wrong") ? "leaks" : "clean"}`,
+    `cookie=${flash && /httponly/i.test(flash) ? "httponly" : "missing"}`,
+    `shown=${html.includes(`value="${email}"`) ? "yes" : "no"}`,
+    `password=${html.includes("wrong") ? "leaks" : "absent"}`,
+    `cleared=${cleared ? "yes" : "no"}`,
+  ].join(" ");
+  return { status: page.status, location: "", detail };
+}
+
 // Language checks use plain fetches outside the cookie jar, so the language cookie never leaks into the
 // session-based steps below.
 async function pageLang(cookie) {
@@ -223,6 +251,11 @@ const steps = [
     "signin rejects wrong password",
     () => request("/api/auth/signin", { method: "POST", form: { email, password: "wrong" } }),
     { status: 302, location: "/auth/signin?error=invalid_credentials" },
+  ],
+  [
+    "failed signin hands the typed email back once, outside the URL",
+    () => typedEmailRoundTrip(),
+    { status: 200, detail: "url=clean cookie=httponly shown=yes password=absent cleared=yes" },
   ],
   [
     "signin accepts correct password",

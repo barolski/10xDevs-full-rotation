@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase";
 import { safeNext, withNext } from "@/lib/redirect";
+import { flashEmail } from "@/lib/auth-flash";
 
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
@@ -15,6 +16,7 @@ export const POST: APIRoute = async (context) => {
   const { error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
+    flashEmail(context.cookies, email, context.url.protocol === "https:");
     return context.redirect(withNext(`/auth/signup?error=${encodeURIComponent(error.code ?? "unknown")}`, next));
   }
 
