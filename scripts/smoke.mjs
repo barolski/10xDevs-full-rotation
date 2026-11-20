@@ -20,6 +20,18 @@ const UPDATED_LOCATION = /^\/organizer\/trainings\/[0-9a-f-]{36}\?updated=1$/;
 const trainingLocation = (query) => new RegExp(`^/t/[0-9a-f-]{36}\\?${query}$`);
 // The local/CI-only organizer from supabase/seed.sql; used as "somebody else's row" in the RLS steps.
 const ORGANIZER_ID = "00000000-0000-4000-8000-000000000001";
+// Organizer-only endpoints and pages, with a dummy training id: the middleware answers before any lookup.
+const GATED_ID = "00000000-0000-4000-8000-000000000999";
+const ORGANIZER_GATED = [
+  ["organizer new-training page", "/organizer/trainings/new", "GET"],
+  ["organizer training page", `/organizer/trainings/${GATED_ID}`, "GET"],
+  ["organizer training edit page", `/organizer/trainings/${GATED_ID}/edit`, "GET"],
+  ["training create api", "/api/organizer/trainings", "POST"],
+  ["training update api", `/api/organizer/trainings/${GATED_ID}`, "POST"],
+  ["attendance api", `/api/organizer/trainings/${GATED_ID}/attendance`, "POST"],
+  ["ratings api", `/api/organizer/trainings/${GATED_ID}/ratings`, "POST"],
+  ["team generation api", `/api/organizer/trainings/${GATED_ID}/teams`, "POST"],
+];
 // Set by the organizer's create step, read by the later player/organizer steps.
 let trainingId = "";
 // Set by the profile-update step, read by the rating steps after it.
@@ -181,6 +193,14 @@ const steps = [
     { status: 302, location: "/auth/signin?next=%2Ft%2F" },
   ],
   ["organizer api rejects anonymous user", () => request("/api/organizer/me"), { status: 401 }],
+  // Every organizer route is gated by the middleware prefix; one step per endpoint proves none escaped it.
+  ...ORGANIZER_GATED.flatMap(([label, path, method]) => [
+    [
+      `${label} rejects anonymous user`,
+      () => request(path, { method }),
+      method === "GET" && !path.startsWith("/api") ? { status: 302, location: "/auth/signin?next=" } : { status: 401 },
+    ],
+  ]),
   [
     "signup api rejects anonymous user",
     () => request("/api/trainings/00000000-0000-4000-8000-000000000999/signup", { method: "POST" }),
@@ -244,6 +264,11 @@ const steps = [
     () => request("/api/organizer/trainings", { method: "POST", form: trainingForm(48) }),
     { status: 403 },
   ],
+  ...ORGANIZER_GATED.map(([label, path, method]) => [
+    `${label} forbids player`,
+    () => request(path, { method }),
+    { status: 403 },
+  ]),
   ["signout clears session", () => request("/api/auth/signout", { method: "POST" }), { status: 302, location: "/" }],
   ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin?next=" }],
   [
